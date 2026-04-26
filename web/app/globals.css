@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/* 纸感 / 墨 / 章泥绿竹 — 无蓝紫渐变 */
+@theme inline {
+  --color-paper-50: #fbf7ef;
+  --color-paper-100: #f2eadc;
+  --color-ink-50: #f4f0e8;
+  --color-ink-200: #c9c0b3;
+  --color-ink-300: #a39a8c;
+  --color-ink-500: #6a6255;
+  --color-ink-600: #524b41;
+  --color-ink-700: #3c362f;
+  --color-ink-800: #2a2621;
+  --color-ink-900: #1e1b18;
+  --color-ink-950: #12100e;
+  --color-cinnabar: #9a2c2c;
+  --color-bamboo-400: #6b8e5a;
+  --color-bamboo-500: #4f6a42;
+  --font-sans: var(--font-body), "Noto Serif SC", "Source Han Serif SC", serif;
+  --font-mono: ui-monospace, monospace;
+  --font-family-display: var(--font-brush), "ZCOOL XiaoWei", "Ma Shan Zheng", serif;
+}
+
+@utility font-display {
+  font-family: var(--font-family-display);
+}
+
+@utility font-sans {
+  font-family: var(--font-sans);
+}
+
+body {
+  background: var(--color-paper-100);
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
+}
+
+@utility ink-scroll {
+  scrollbar-color: var(--color-ink-200) transparent;
+  scrollbar-width: thin;
+}
+.ink-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.ink-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-ink-200);
+  border-radius: 999px;
+}

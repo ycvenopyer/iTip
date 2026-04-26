@@ -1,0 +1,17 @@
+# Monorepo root: web app under web/
+web/node_modules/
+web/.next/
+web/out/
+web/data/
+web/.env
+web/.env.local
+web/.env.*.local
+web/*.tsbuildinfo
+web/.vercel
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
