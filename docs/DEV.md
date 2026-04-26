@@ -5,6 +5,22 @@
 - `web/`：Next 应用与全部源码、`.env.example`。
 - `docs/`：需求、架构、本文档（与实现同步维护）。
 
+## 推送到 GitHub
+
+在仓库根目录（含 `web/` 与 `docs/`）已初始化 **Git**；在 GitHub 上**新建空仓库**（建议名：`iTip` 或 `itip`），**不要**勾选自动添加 README，然后：
+
+```bash
+cd /path/to/iTip
+git remote add origin https://github.com/ycvenopyer/iTip.git
+git branch -M main
+git push -u origin main
+```
+
+`https://ycvenopyer.github.io/` 对应 **用户站点** 仓库 [ycvenopyer/ycvenopyer.github.io](https://github.com/ycvenopyer/ycvenopyer.github.io)（你当前是 Hexo 等静态站）。**不要把本项目的代码强行推到该仓库** unless 你准备替换该站点。iTip 为带 **API、SQLite、Node 运行时** 的 Next 应用，**不能**原样用 GitHub Pages 托管整站；可：
+
+- 把**源码**托管到独立仓库 `iTip`；线上用自有服务器、Docker、或 PaaS（如 Vercel 等）运行 `web/`，或  
+- 若仅需「在 GitHub 展示代码」：用上面的 `git push` 即可。
+
 ## 环境变量
 
 自 `web/.env.example` 复制为 `web/.env.local`：
