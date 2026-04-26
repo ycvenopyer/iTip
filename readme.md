@@ -11,7 +11,7 @@
 
 ## 快速开始
 
-1. 进入 `web/` 目录，将 `.env.example` 复制为 `.env.local` 并配置 `AUTH_SECRET`、`OPENAI_API_KEY` 等。  
+1. 进入 `web/` 目录，将 `.env.example` 复制为 `.env.local` 并配置 `AUTH_SECRET`；再配置 `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL`（本机 Ollama 等开源模型，或云「OpenAI 兼容」服务，见 [docs/DEV.md](docs/DEV.md)）。  
 2. 执行 `npm install`、`npm run dev`。  
 3. 浏览器打开首页，**注册** 后使用 **对话**。
 
@@ -19,7 +19,7 @@
 
 ## 技术要点（摘要）
 
-- Next.js 15.2.8+（App Router）、Vercel AI SDK、OpenAI 兼容 API。  
+- Next.js 15.2.8+（App Router）、Vercel AI SDK、**OpenAI 兼容** 模型（Ollama / 各云均可，不强制美国 OpenAI）。  
 - SQLite 用户表、JWT 会话（HttpOnly Cookie）、Zod 校验。  
 - 设计：纸墨色系与书法展示字体，**未使用**蓝紫渐变类通用 AI 风配色。
 

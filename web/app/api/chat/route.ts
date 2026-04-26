@@ -2,6 +2,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { convertToModelMessages, smoothStream, streamText, type UIMessage } from "ai";
 import { NextResponse } from "next/server";
 
+import { resolveLlmConnection } from "@/lib/ai/config";
 import { CALLIGRAPHY_SYSTEM } from "@/lib/ai/prompts";
 import { getSession } from "@/lib/auth/session";
 
@@ -14,12 +15,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "需要登录" }, { status: 401 });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json(
-      { error: "未配置 OPENAI_API_KEY。请在 .env 中设置（可配合 OPENAI_BASE_URL 指向兼容网关）。" },
-      { status: 503 }
-    );
+  const llm = resolveLlmConnection();
+  if (!llm.ok) {
+    return NextResponse.json({ error: llm.message }, { status: 503 });
   }
+  const { baseURL, apiKey, modelId } = llm.data;
 
   let body: { messages: UIMessage[] };
   try {
@@ -33,10 +33,10 @@ export async function POST(req: Request) {
   }
 
   const { messages: uiMessages } = body;
-  const modelId = process.env.OPENAI_MODEL || "gpt-4o";
+
   const openai = createOpenAI({
-    baseURL: process.env.OPENAI_BASE_URL,
-    apiKey: process.env.OPENAI_API_KEY,
+    baseURL,
+    apiKey,
   });
   const model = openai(modelId);
 

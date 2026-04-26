@@ -23,17 +23,22 @@ git push -u origin main
 
 ## 环境变量
 
-自 `web/.env.example` 复制为 `web/.env.local`：
+自 `web/.env.example` 复制为 `web/.env.local`。
 
 | 变量 | 说明 |
 |------|------|
 | `AUTH_SECRET` | 随机长字符串，用于 JWT 签名；**必填**（注册/登录会写入 Cookie）。 |
 | `DATABASE_PATH` | 可选；默认 `web` 下 `data/itip.db`（已 `.gitignore`）。 |
-| `OPENAI_API_KEY` | 必填以使用对话；可对接任意 OpenAI 兼容端点。 |
-| `OPENAI_BASE_URL` | 可选；不填则使用提供方默认根路径。 |
-| `OPENAI_MODEL` | 默认 `gpt-4o`；需附图时请使用支持**视觉**的模型。 |
+| `AI_BASE_URL` | **可选**；**OpenAI 兼容** API 根路径（以 `/v1` 结尾）。本机 Ollama 见下。`AI_*` 优先于旧名 `OPENAI_BASE_URL`。 |
+| `AI_API_KEY` | **按提供方要求**：云/自建若需要密钥则填；**本机 Ollama 可留空**（内部使用占位）。优先于 `OPENAI_API_KEY`。 |
+| `AI_MODEL` | 模型名；未设置时：若已配置 `AI_BASE_URL` 则默认 `llama3.2`（Ollama 常见名），否则默认 `gpt-4o`。需附图时须选带**多模态**的模型。 |
+| `OPENAI_API_KEY` 等 | **兼容旧名**，行为与上面对应项相同，**AI\_\*** 优先。 |
 
-在 `web/.env.local` 中**至少**填写 `AUTH_SECRET` 与 `OPENAI_API_KEY` 后，对话功能才可用。`AUTH_SECRET` 可用随机 32+ 字节 Base64/随机字符串。仓库内不提交 `.env.local`（见 `web/.gitignore`）。
+在 `web/.env.local` 中**至少**配置 `AUTH_SECRET`；**对话**需再配置 **「本机/网关 Base + 模型」** 或 **云 API 密钥**（二选一或组合，见 `resolveLlmConnection`）。**不限制使用美国 OpenAI**：任意提供 OpenAI 兼容协议的服务即可（Ollama 本地、OpenRouter、Groq、vLLM、部分国内云「OpenAI 兼容」等）。
+
+**本机 Ollama（开源、离线、无区号限制）**：安装 [Ollama](https://ollama.com) 后执行 `ollama pull llama3.2`（或自选模型），启动服务，再设 `AI_BASE_URL=http://127.0.0.1:11434/v1` 与 `AI_MODEL=你的模型名`。
+
+仓库内不提交 `.env.local`（见 `web/.gitignore`）。
 
 ## 本地运行
 
@@ -44,7 +49,7 @@ npm install
 npm run dev
 ```
 
-浏览器打开 `http://localhost:3000`，**注册/登录**后进入「对话」；若未配置 `OPENAI_API_KEY`，发送消息会得到服务端提示。
+浏览器打开 `http://localhost:3000`，**注册/登录**后进入「对话」；若未配置任何 LLM 相关变量，会得到 **503** 与提示。
 
 ## 生产（私有部署）
 
@@ -76,5 +81,5 @@ npm run start
 ## 常见故障
 
 - **`better-sqlite3` 编译失败**：需安装本机 C++ 构建环境（如 Windows 的 `windows-build-tools` 或 Visual Studio Build Tools）。
-- **对话 503**：未配置 `OPENAI_API_KEY` 或 API 不可达。
+- **对话 503**：未配置 `AI_BASE_URL` / `AI_API_KEY`（或旧名 `OPENAI_*`）或接口不可达（如 Ollama 未启动）。
 - **附图无效**：当前模型需支持多模态；在 `.env` 中更换为带 vision 的模型名。

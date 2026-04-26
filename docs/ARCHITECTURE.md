@@ -15,7 +15,7 @@ flowchart LR
   Next[Next 应用]
   API[Route Handlers]
   DB[(SQLite)]
-  LLM[OpenAI 兼容 API]
+  LLM[OpenAI 兼容端点 如 Ollama/云]
 
   Browser -->|页面与 Cookie| Next
   Browser -->|POST /api/chat| API
