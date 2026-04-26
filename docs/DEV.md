@@ -33,17 +33,18 @@ git push -u origin main
 | `OPENAI_BASE_URL` | 可选；不填则使用提供方默认根路径。 |
 | `OPENAI_MODEL` | 默认 `gpt-4o`；需附图时请使用支持**视觉**的模型。 |
 
+在 `web/.env.local` 中**至少**填写 `AUTH_SECRET` 与 `OPENAI_API_KEY` 后，对话功能才可用。`AUTH_SECRET` 可用随机 32+ 字节 Base64/随机字符串。仓库内不提交 `.env.local`（见 `web/.gitignore`）。
+
 ## 本地运行
 
 ```bash
 cd web
-cp .env.example .env.local
-# 编辑 .env.local
+# 若尚无 .env.local：cp .env.example .env.local 并填好各变量
 npm install
 npm run dev
 ```
 
-浏览器打开 `http://localhost:3000`，注册后进入「对话」。
+浏览器打开 `http://localhost:3000`，**注册/登录**后进入「对话」；若未配置 `OPENAI_API_KEY`，发送消息会得到服务端提示。
 
 ## 生产（私有部署）
 
