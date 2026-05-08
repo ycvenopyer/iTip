@@ -38,6 +38,10 @@ git push -u origin main
 
 **本机 Ollama（开源、离线、无区号限制）**：安装 [Ollama](https://ollama.com) 后执行 `ollama pull llama3.2`（或自选模型），启动服务，再设 `AI_BASE_URL=http://127.0.0.1:11434/v1` 与 `AI_MODEL=你的模型名`。
 
+**GLM（智谱）**：  
+- **本地/开源权重路线**：在 Ollama 中拉取 GLM 相关模型（例如库中的 `glm4` 等，以 [Ollama Library](https://ollama.com/search?q=glm) 为准），配置同上，`AI_MODEL` 填 `ollama list` 里显示的模型名。  
+- **云端 GLM**：智谱提供 [OpenAI 兼容接口](https://open.bigmodel.cn/dev/api)，典型配置为 `AI_BASE_URL=https://open.bigmodel.cn/api/paas/v4`、`AI_API_KEY=<智谱 Key>`、`AI_MODEL=<控制台中的模型名，如 glm-4-flash>`。订阅/编码套餐若使用不同 Base，以官方文档为准。
+
 仓库内不提交 `.env.local`（见 `web/.gitignore`）。
 
 ## 本地运行
