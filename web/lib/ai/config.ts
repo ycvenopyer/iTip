@@ -30,11 +30,17 @@ export function resolveLlmConnection(): { ok: true; data: LlmConnection } | { ok
     return {
       ok: false,
       message:
-        "未配置模型接口：请设置 AI_BASE_URL（本机/兼容网关，如 Ollama）和/或 AI_API_KEY（云或自建密钥）。已弃用仅 OPENAI_ 命名时仍可读 OPENAI_API_KEY 作为兼容。详见 .env.example 与 docs/DEV.md。",
+        "未配置模型接口：请设置 AI_BASE_URL + AI_API_KEY（如智谱直连）或仅 AI_BASE_URL（本机 Ollama）等。详见 .env.example 与 docs/DEV.md。",
     };
   }
 
-  const modelId = explicitModel || (baseURL ? "llama3.2" : "gpt-4o");
+  const modelId =
+    explicitModel ||
+    (baseURL
+      ? /bigmodel\.cn|zhipu/i.test(baseURL)
+        ? "glm-4-flash"
+        : "llama3.2"
+      : "gpt-4o");
   const apiKey = rawKey || (baseURL ? "ollama" : "");
 
   return { ok: true, data: { baseURL, apiKey, modelId } };
