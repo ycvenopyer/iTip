@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     baseURL,
     apiKey,
   });
-  const model = openai(modelId);
+  const model = openai.chat(modelId);
 
   const modelMessages = await convertToModelMessages(uiMessages, {
     ignoreIncompleteToolCalls: true,

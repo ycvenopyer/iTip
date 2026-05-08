@@ -1,20 +1,5 @@
 import type { Metadata } from "next";
-import { Noto_Serif_SC, ZCOOL_XiaoWei } from "next/font/google";
 import "./globals.css";
-
-const bodySerif = Noto_Serif_SC({
-  variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  display: "swap",
-});
-
-const display = ZCOOL_XiaoWei({
-  variable: "--font-brush",
-  subsets: ["latin"],
-  weight: "400",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "iTip — 书法助手",
@@ -27,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-Hans" className={`${bodySerif.variable} ${display.variable}`}>
+    <html lang="zh-Hans">
       <body className="antialiased font-sans">{children}</body>
     </html>
   );

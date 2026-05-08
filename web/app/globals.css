@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* 系统字体栈：避免 build/dev 时依赖 Google Fonts（内网或防火墙下会失败） */
+:root {
+  --font-body: "Noto Serif SC", "Source Han Serif SC", "SimSun", "NSimSun", serif;
+  --font-brush: "ZCOOL XiaoWei", "Ma Shan Zheng", "KaiTi", "STKaiti", serif;
+}
+
 /* 纸感 / 墨 / 章泥绿竹 — 无蓝紫渐变 */
 @theme inline {
   --color-paper-50: #fbf7ef;
@@ -16,9 +22,9 @@
   --color-cinnabar: #9a2c2c;
   --color-bamboo-400: #6b8e5a;
   --color-bamboo-500: #4f6a42;
-  --font-sans: var(--font-body), "Noto Serif SC", "Source Han Serif SC", serif;
+  --font-sans: var(--font-body);
   --font-mono: ui-monospace, monospace;
-  --font-family-display: var(--font-brush), "ZCOOL XiaoWei", "Ma Shan Zheng", serif;
+  --font-family-display: var(--font-brush);
 }
 
 @utility font-display {
