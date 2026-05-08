@@ -27,7 +27,7 @@ flowchart LR
 ## 重要路径
 
 - **会话**：`itip_session` Cookie（HttpOnly）；`lib/auth/session.ts`。
-- **对话**：`app/api/chat/route.ts` 内 `getSession()` 失败则 401；成功则 `streamText` 并 `toUIMessageStreamResponse()`。
+- **对话**：`app/api/chat/route.ts` 内 `getSession()` 失败则 401；成功则 `streamText`：`system` 为 `CALLIGRAPHY_SYSTEM`，`messages` 为 **`CALLIGRAPHY_FEW_SHOT_MESSAGES`（few-shot）** 与前端经 `convertToModelMessages` 后的内容拼接，再 `toUIMessageStreamResponse()`。
 - **前端对话**：`components/CalligraphyChat.tsx` 使用 `DefaultChatTransport({ api: "/api/chat", credentials: "include" })` 与 `useChat`（见 [AI SDK UI 与流](https://sdk.vercel.ai/docs/ai-sdk-ui/stream-protocol)）。
 
 ## 流式分词（中文）

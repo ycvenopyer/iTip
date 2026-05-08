@@ -3,7 +3,7 @@ import { convertToModelMessages, smoothStream, streamText, type UIMessage } from
 import { NextResponse } from "next/server";
 
 import { resolveLlmConnection } from "@/lib/ai/config";
-import { CALLIGRAPHY_SYSTEM } from "@/lib/ai/prompts";
+import { CALLIGRAPHY_FEW_SHOT_MESSAGES, CALLIGRAPHY_SYSTEM } from "@/lib/ai/prompts";
 import { getSession } from "@/lib/auth/session";
 
 export const maxDuration = 120;
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model,
     system: CALLIGRAPHY_SYSTEM,
-    messages: modelMessages,
+    messages: [...CALLIGRAPHY_FEW_SHOT_MESSAGES, ...modelMessages],
     experimental_transform: smoothStream({
       chunking: new Intl.Segmenter("zh-Hans", { granularity: "word" }),
     }),
