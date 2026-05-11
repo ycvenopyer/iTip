@@ -19,8 +19,9 @@ flowchart LR
 
   Browser -->|页面与 Cookie| Next
   Browser -->|POST /api/chat| API
+  Browser -->|GET/POST/PATCH/DELETE /api/chat/conversations| API
   Browser -->|POST /api/auth/*| API
-  API -->|读写字段| DB
+  API -->|读写 users/chat_conversations| DB
   API -->|streamText| LLM
 ```
 
@@ -29,6 +30,11 @@ flowchart LR
 - **会话**：`itip_session` Cookie（HttpOnly）；`lib/auth/session.ts`。
 - **对话**：`app/api/chat/route.ts` 内 `getSession()` 失败则 401；成功则 `streamText`：`system` 为 `CALLIGRAPHY_SYSTEM`，`messages` 为 **`CALLIGRAPHY_FEW_SHOT_MESSAGES`（few-shot）** 与前端经 `convertToModelMessages` 后的内容拼接，再 `toUIMessageStreamResponse()`。
 - **前端对话**：`components/CalligraphyChat.tsx` 使用 `DefaultChatTransport({ api: "/api/chat", credentials: "include" })` 与 `useChat`（见 [AI SDK UI 与流](https://sdk.vercel.ai/docs/ai-sdk-ui/stream-protocol)）。
+- **多会话管理**：
+  - 数据层：`lib/chat-store.ts` 提供 `listChatConversations`、`createChatConversation`、`getChatConversation`、`saveChatConversationMessages`、`renameChatConversation`、`pinChatConversation`、`deleteChatConversation`
+  - API 层：`/api/chat/conversations/route.ts`（GET/POST 列表与创建），`/api/chat/conversations/[id]/route.ts`（PATCH/DELETE 重命名/置顶/删除）
+  - 页面层：`app/chat/page.tsx` 根据 `?c=` 参数路由会话，自动创建首个会话
+  - 组件层：`components/ChatShell.tsx` 侧边栏展示会话列表，支持搜索、置顶、重命名、删除交互
 
 ## 流式分词（中文）
 

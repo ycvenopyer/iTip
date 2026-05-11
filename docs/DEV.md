@@ -72,8 +72,22 @@ npm run start
 - 保持 `next` 在官方公告的**当前修复线**上（如 15.2.8+ 对 [2025-12-11 安全更新](https://nextjs.org/blog/security-update-2025-12-11) 的覆盖）；升级后运行 `npm run build` 并更新本文档中版本句。
 - 鉴权在 API 中校验；勿仅信任中间件（参见 [App Router 认证](https://nextjs.org/docs/app/guides/authentication)）。
 
+## 会话管理 API（供参考）
+
+前端通过以下 REST 端点管理多会话（均需登录 Cookie）：
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/chat/conversations` | GET | 获取当前用户的所有会话列表（含置顶标记） |
+| `/api/chat/conversations` | POST | 创建新会话，返回 `{ id }` |
+| `/api/chat/conversations/[id]` | PATCH | 重命名或置顶：`{ title?: string, pinned?: boolean }` |
+| `/api/chat/conversations/[id]` | DELETE | 删除指定会话 |
+
+路由参数：`/chat?c=<conversationId>` 打开指定会话；无参数时自动跳转至最近会话或新建。
+
 ## 常见故障
 
 - **`better-sqlite3` 编译失败**：需安装本机 C++ 构建环境（如 Windows 的 `windows-build-tools` 或 Visual Studio Build Tools）。
 - **对话 503**：智谱未填 `AI_API_KEY` / Base 错误，或未配置任何 LLM 变量，或接口不可达（如 Ollama 未启动）。
 - **附图无效**：当前模型需支持多模态；在 `.env` 中更换为带 vision 的模型名。
+- **会话列表为空/异常**：检查 `chat_conversations` 表结构（`lib/db.ts` 会自动迁移，若旧版本可手动添加 `pinned` 列）。
