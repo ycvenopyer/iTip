@@ -5,22 +5,6 @@
 - `web/`：Next 应用与全部源码、`.env.example`。
 - `docs/`：需求、架构、本文档（与实现同步维护）。
 
-## 推送到 GitHub（账号 [ycvenopyer](https://github.com/ycvenopyer)）
-
-目标：把本仓库推到你 **GitHub 用户名下** 的某仓库，例如 `https://github.com/ycvenopyer/iTip`（**不是** 博客源站仓库 [ycvenopyer.github.io](https://github.com/ycvenopyer/ycvenopyer.github.io)）。
-
-1. 打开 [github.com/new](https://github.com/new)，**Owner** 选 `ycvenopyer`，**Repository name** 填 `iTip`（与下面远程 URL 一致即可），**不要**勾选 “Add a README / .gitignore / license”（保持空仓库），创建。
-2. 在本地 iTip 根目录执行（若已配置 `origin` 可省略 `git remote add` 一行）：
-
-```bash
-cd /path/to/iTip
-git remote add origin https://github.com/ycvenopyer/iTip.git
-git branch -M main
-git push -u origin main
-```
-
-说明：`ycvenopyer.github.io` 是 **个人主页站**；`iTip` 是**独立项目仓库**。本应用带 **API、SQLite、Node**，**不能**整站用 GitHub Pages 托管，代码在 GitHub 上即可，线上用自有服务或 PaaS 跑 `web/`。
-
 ## 环境变量
 
 自 `web/.env.example` 复制为 `web/.env.local`。

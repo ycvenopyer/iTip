@@ -18,7 +18,6 @@ export default async function ChatLayout({
           <Link href="/" className="font-display text-lg tracking-tight text-ink-900">
             iTip
           </Link>
-          <span className="hidden text-sm text-ink-500 sm:inline">书法助手</span>
         </div>
         <div className="flex items-center gap-4 text-sm text-ink-700">
           <span className="max-w-[12rem] truncate" title={s.email}>
@@ -27,7 +26,7 @@ export default async function ChatLayout({
           <LogoutButton />
         </div>
       </header>
-      <main className="flex min-h-0 flex-1 flex-col px-4 py-4 md:px-8 md:py-6">
+      <main className="relative flex flex-1 overflow-hidden">
         {children}
       </main>
     </div>

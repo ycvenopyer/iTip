@@ -1,13 +1,45 @@
-import { CalligraphyChat } from "@/components/CalligraphyChat";
+import { redirect } from "next/navigation";
 
-export default function ChatPage() {
+import { ChatShell } from "@/components/ChatShell";
+import {
+  createChatConversation,
+  getChatConversation,
+  listChatConversations,
+} from "@/lib/chat-store";
+import { getSession } from "@/lib/auth/session";
+
+type Props = { searchParams: Promise<{ c?: string }> };
+
+export default async function ChatPage({ searchParams }: Props) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  const { c } = await searchParams;
+  const list = listChatConversations(session.userId);
+
+  let activeId = c ?? null;
+  if (!activeId || !list.some((x) => x.id === activeId)) {
+    if (list.length > 0) {
+      activeId = list[0].id;
+    } else {
+      activeId = createChatConversation(session.userId);
+    }
+    if (c !== activeId) {
+      redirect(`/chat?c=${activeId}`);
+    }
+  }
+
+  const convo = getChatConversation(session.userId, activeId);
+  if (!convo) {
+    const fresh = createChatConversation(session.userId);
+    redirect(`/chat?c=${fresh}`);
+  }
+
   return (
-    <div className="mx-auto flex h-[min(85vh,880px)] max-w-3xl flex-col">
-      <h1 className="font-display mb-2 text-2xl text-ink-900 md:text-3xl">对话</h1>
-      <p className="text-ink-600/90 mb-4 text-sm">
-        领域：硬笔 · 软笔 · 兼修。上传作品局部图时可辅助讨论用笔与体势（非鉴定）。
-      </p>
-      <CalligraphyChat />
-    </div>
+    <ChatShell
+      summaries={list}
+      activeId={convo.id}
+      initialMessages={convo.messages}
+    />
   );
 }
