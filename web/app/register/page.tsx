@@ -1,8 +1,14 @@
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { RegisterForm } from "@/components/RegisterForm";
 import { getSession } from "@/lib/auth/session";
+
+export const metadata: Metadata = {
+  title: "注册",
+  description: "注册 iTip 书法助手账号，数据存于本地数据库，支持私有部署。",
+};
 
 export default async function RegisterPage() {
   const s = await getSession();

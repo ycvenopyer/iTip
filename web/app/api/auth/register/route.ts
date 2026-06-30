@@ -1,10 +1,11 @@
-import { randomUUID } from "node:crypto";
+﻿import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { z } from "zod";
 
 import { getDb } from "@/lib/db";
 import { createSessionCookie } from "@/lib/auth/session";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -13,7 +14,22 @@ const bodySchema = z.object({
   password: z.string().min(8).max(200),
 });
 
+function clientIp(req: Request): string {
+  const xff = req.headers.get("x-forwarded-for");
+  return xff?.split(",")[0]?.trim() || "127.0.0.1";
+}
+
 export async function POST(req: Request) {
+  const ip = clientIp(req);
+
+  const rl = rateLimit(`register:${ip}`, 5, 10 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `请求过于频繁，请 ${rl.retryAfterSec} 秒后重试` },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
   let json: unknown;
   try {
     json = await req.json();

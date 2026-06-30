@@ -1,12 +1,16 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 export function RegisterForm() {
   const router = useRouter();
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const emailId = useId();
+  const passwordId = useId();
+  const errId = useId();
+
   return (
     <form
       onSubmit={async (e) => {
@@ -35,35 +39,42 @@ export function RegisterForm() {
         }
       }}
       className="space-y-4"
+      noValidate
     >
       <div>
-        <label htmlFor="re-email" className="text-ink-600/90 block text-sm">
+        <label htmlFor={emailId} className="text-ink-600/90 block text-sm">
           邮箱
         </label>
         <input
-          id="re-email"
+          id={emailId}
           name="email"
           type="email"
           required
           autoComplete="email"
+          aria-describedby={err ? errId : undefined}
           className="border-ink-200/50 bg-paper-100/80 focus:ring-bamboo-400/40 mt-1 w-full rounded-xl border px-3 py-2 text-ink-900 focus:outline-none focus:ring-2"
         />
       </div>
       <div>
-        <label htmlFor="re-password" className="text-ink-600/90 block text-sm">
+        <label htmlFor={passwordId} className="text-ink-600/90 block text-sm">
           密码（至少 8 位）
         </label>
         <input
-          id="re-password"
+          id={passwordId}
           name="password"
           type="password"
           required
           minLength={8}
           autoComplete="new-password"
+          aria-describedby={err ? errId : undefined}
           className="border-ink-200/50 bg-paper-100/80 focus:ring-bamboo-400/40 mt-1 w-full rounded-xl border px-3 py-2 text-ink-900 focus:outline-none focus:ring-2"
         />
       </div>
-      {err && <p className="text-cinnabar text-sm">{err}</p>}
+      {err && (
+        <p id={errId} className="text-cinnabar text-sm" role="alert">
+          {err}
+        </p>
+      )}
       <button
         type="submit"
         disabled={loading}

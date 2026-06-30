@@ -1,0 +1,25 @@
+﻿{
+  "name": "iTip - 书法助手",
+  "short_name": "iTip",
+  "description": "面向硬笔、软笔与兼修者的书法对话助手。支持本地私有部署。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f2eadc",
+  "theme_color": "#1e1b18",
+  "orientation": "any",
+  "lang": "zh-Hans",
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

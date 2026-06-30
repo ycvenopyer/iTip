@@ -1,4 +1,4 @@
-# 开发与环境
+﻿# 开发与环境
 
 ## 目录
 
@@ -11,14 +11,15 @@
 
 | 变量 | 说明 |
 |------|------|
-| `AUTH_SECRET` | 随机长字符串，用于 JWT 签名；**必填**（注册/登录会写入 Cookie）。 |
-| `DATABASE_PATH` | 可选；默认 `web` 下 `data/itip.db`（已 `.gitignore`）。 |
-| `AI_BASE_URL` | **OpenAI 兼容** API 根地址。**智谱直连**典型值：`https://open.bigmodel.cn/api/paas/v4`（套餐不同可能不同，以 [智谱文档](https://open.bigmodel.cn/dev/api) 为准）。本机 Ollama 一般为 `http://127.0.0.1:11434/v1`。`AI_*` 优先于旧名 `OPENAI_BASE_URL`。 |
-| `AI_API_KEY` | 智谱等平台必填 **API Key**；**仅本机 Ollama** 时可留空（内部占位）。优先于 `OPENAI_API_KEY`。 |
-| `AI_MODEL` | 模型名（控制台/服务商给出的 id）。未设置时：智谱域名默认 `glm-4-flash`，其它带 `AI_BASE_URL` 时默认 `llama3.2`，仅密钥走官方默认基址时默认 `gpt-4o`。附图须选**多模态**模型。 |
-| `OPENAI_API_KEY` 等 | **兼容旧名**，行为与上面对应项相同，**AI\_\*** 优先。 |
+| `AUTH_SECRET` | 随机长字符串，用于 JWT 签名；**必填**（注册/登录会写入 Cookie）。|
+| `SITE_URL` | 可选；生产环境设为真实域名，用于 sitemap、Open Graph 等 SEO 元数据。默认 `https://itip.example.com`。|
+| `DATABASE_PATH` | 可选；默认 `web` 下 `data/itip.db`（已 `.gitignore`）。|
+| `AI_BASE_URL` | **OpenAI 兼容** API 根地址。**智谱直连**典型值：`https://open.bigmodel.cn/api/paas/v4`（套餐不同可能不同，以 [智谱文档](https://open.bigmodel.cn/dev/api) 为准）。本机 Ollama 一般为 `http://127.0.0.1:11434/v1`。`AI_*` 优先于旧名 `OPENAI_BASE_URL`。|
+| `AI_API_KEY` | 智谱等平台必填 **API Key**；**仅本机 Ollama** 时可留空（内部占位）。优先于 `OPENAI_API_KEY`。|
+| `AI_MODEL` | 模型名（控制台/服务商给出的 id）。未设置时：智谱域名默认 `glm-4-flash`，其它带 `AI_BASE_URL` 时默认 `llama3.2`，仅密钥走官方默认基地址时默认 `gpt-4o`。附图须选 **多模态** 模型。|
+| `OPENAI_API_KEY` 等 | **兼容旧名**，行为与上面对应项相同，**AI_\*** 优先。|
 
-在 `web/.env.local` 中**至少**配置 `AUTH_SECRET`；**对话**需配置 **`AI_BASE_URL` + `AI_API_KEY` + `AI_MODEL`**（智谱直连）或本机 Ollama 等（见 `web/lib/ai/config.ts`）。
+在 `web/.env.local` 中 **至少** 配置 `AUTH_SECRET`；**对话** 需配置 **`AI_BASE_URL` + `AI_API_KEY` + `AI_MODEL`**（智谱直连）或本机 Ollama 等（见 `web/lib/ai/config.ts`）。
 
 **智谱 GLM 直连（推荐，无需 Ollama）**：在 [智谱开放平台](https://open.bigmodel.cn) 创建 API Key，使用 [OpenAI 兼容](https://open.bigmodel.cn/dev/api) 方式对接。典型三项：
 
@@ -48,7 +49,6 @@ npm run dev
 ## 生产（私有部署）
 
 1. 构建：
-
 ```bash
 cd web
 npm run build
@@ -57,7 +57,6 @@ npm run build
 2. 独立输出（`output: "standalone"`）产物在 `web/.next/standalone`，与官方 [Self-hosting](https://nextjs.org/docs/app/building-your-application/deploying#nodejs-server) 说明一致，需同时带上 `static` 等目录或按官方 Docker 样例组织。
 
 3. 启动：
-
 ```bash
 cd web
 npm run start
@@ -84,6 +83,13 @@ npm run start
 | `/api/chat/conversations/[id]` | DELETE | 删除指定会话 |
 
 路由参数：`/chat?c=<conversationId>` 打开指定会话；无参数时自动跳转至最近会话或新建。
+
+## SEO 与 PWA
+
+- `robots.ts`：自动生成 robots.txt，禁止 `/api/*` 和 `/chat?*` 被索引。
+- `sitemap.ts`：自动生成 sitemap.xml，包含首页、登录、注册页。
+- `manifest.json`：支持 PWA 安装，提供桌面图标和离线缓存。
+- 设置 `SITE_URL` 环境变量即可自动适配生产环境 URL。
 
 ## 常见故障
 

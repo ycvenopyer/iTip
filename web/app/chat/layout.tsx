@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { LogoutButton } from "@/components/LogoutButton";
@@ -13,18 +13,18 @@ export default async function ChatLayout({
   if (!s) redirect("/login");
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-between border-b border-ink-200/25 bg-paper-50/80 px-4 py-3 backdrop-blur md:px-8">
+      <header className="flex items-center justify-between border-b border-ink-200/25 bg-paper-50/80 px-4 py-3 backdrop-blur md:px-8" role="banner">
         <div className="flex items-baseline gap-4">
-          <Link href="/" className="font-display text-lg tracking-tight text-ink-900">
+          <Link href="/" className="font-display text-lg tracking-tight text-ink-900" aria-label="iTip 首页">
             iTip
           </Link>
         </div>
-        <div className="flex items-center gap-4 text-sm text-ink-700">
+        <nav className="flex items-center gap-4 text-sm text-ink-700" aria-label="用户菜单">
           <span className="max-w-[12rem] truncate" title={s.email}>
             {s.email}
           </span>
           <LogoutButton />
-        </div>
+        </nav>
       </header>
       <main className="relative flex flex-1 overflow-hidden">
         {children}

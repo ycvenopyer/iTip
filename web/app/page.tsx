@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -36,8 +36,16 @@ export default function Home() {
           <div className="ink-wash-3 absolute left-1/3 top-1/2 h-64 w-64 rounded-full opacity-10" />
         </div>
 
+        {/* 跳过导航 - 可访问性 */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-ink-800 focus:px-4 focus:py-2 focus:text-sm focus:text-paper-50"
+        >
+          跳到主要内容
+        </a>
+
         {/* 主内容 */}
-        <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6">
+        <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6" id="main-content">
           {/* 标题区域 */}
           <div className="text-center">
             {/* 印章 */}
@@ -49,7 +57,7 @@ export default function Home() {
                 boxShadow: "inset 0 0 0 2px rgba(154, 44, 44, 0.3)",
               }}
             >
-              <span className="font-display text-3xl text-cinnabar">书</span>
+              <span className="font-display text-3xl text-cinnabar" aria-hidden="true">书</span>
             </div>
 
             {/* 主标题 */}
@@ -83,7 +91,7 @@ export default function Home() {
                 mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
               }`}
             >
-              以笔墨为伴，探书法之趣。
+              以笔砚为伴，探书法之趣。
               <br />
               问技法、赏碑帖、论笔性。
             </p>
@@ -107,10 +115,16 @@ export default function Home() {
               >
                 登录
               </Link>
+              <Link
+                href="/register"
+                className="text-sm tracking-widest text-ink-500 transition-colors duration-300 hover:text-ink-700"
+              >
+                注册
+              </Link>
             </div>
           </div>
 
-          {/* 底部三诀 - 极简 */}
+          {/* 底部三谛 - 极简 */}
           <div
             className={`absolute bottom-12 left-0 right-0 px-6 transition-all duration-1000 delay-[1400ms] ${
               mounted ? "opacity-100" : "opacity-0"
@@ -137,12 +151,12 @@ export default function Home() {
 
         {/* 角落装饰 */}
         <div className="pointer-events-none absolute bottom-6 left-6 text-xs text-ink-300">
-          <span className="writing-vertical font-body tracking-widest">
+          <span className="writing-vertical font-body tracking-widest" aria-hidden="true">
             翰墨千秋
           </span>
         </div>
         <div className="pointer-events-none absolute right-6 top-6 text-xs text-ink-300">
-          <span className="writing-vertical font-body tracking-widest">
+          <span className="writing-vertical font-body tracking-widest" aria-hidden="true">
             文房四宝
           </span>
         </div>

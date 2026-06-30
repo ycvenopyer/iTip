@@ -1,3 +1,4 @@
+﻿import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { ChatShell } from "@/components/ChatShell";
@@ -7,6 +8,12 @@ import {
   listChatConversations,
 } from "@/lib/chat-store";
 import { getSession } from "@/lib/auth/session";
+
+export const metadata: Metadata = {
+  title: "对话",
+  description: "与 iTip 书法助手对话，探讨硬笔、软笔、兼修之法。",
+  robots: { index: false, follow: false },
+};
 
 type Props = { searchParams: Promise<{ c?: string }> };
 
