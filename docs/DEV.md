@@ -17,6 +17,7 @@
 | `AI_BASE_URL` | **OpenAI 兼容** API 根地址。**智谱直连**典型值：`https://open.bigmodel.cn/api/paas/v4`（套餐不同可能不同，以 [智谱文档](https://open.bigmodel.cn/dev/api) 为准）。本机 Ollama 一般为 `http://127.0.0.1:11434/v1`。`AI_*` 优先于旧名 `OPENAI_BASE_URL`。|
 | `AI_API_KEY` | 智谱等平台必填 **API Key**；**仅本机 Ollama** 时可留空（内部占位）。优先于 `OPENAI_API_KEY`。|
 | `AI_MODEL` | 模型名（控制台/服务商给出的 id）。未设置时：智谱域名默认 `glm-4-flash`，其它带 `AI_BASE_URL` 时默认 `llama3.2`，仅密钥走官方默认基地址时默认 `gpt-4o`。附图须选 **多模态** 模型。|
+| AI_IMAGE_MODEL | 图片生成模型名。智谱默认 cogview-3-flash（快速），可选 cogview-3-plus（高质量）；其他供应商默认 dall-e-3。复用 AI_BASE_URL + AI_API_KEY。 |
 | `OPENAI_API_KEY` 等 | **兼容旧名**，行为与上面对应项相同，**AI_\*** 优先。|
 
 在 `web/.env.local` 中 **至少** 配置 `AUTH_SECRET`；**对话** 需配置 **`AI_BASE_URL` + `AI_API_KEY` + `AI_MODEL`**（智谱直连）或本机 Ollama 等（见 `web/lib/ai/config.ts`）。
@@ -81,6 +82,7 @@ npm run start
 | `/api/chat/conversations` | POST | 创建新会话，返回 `{ id }` |
 | `/api/chat/conversations/[id]` | PATCH | 重命名或置顶：`{ title?: string, pinned?: boolean }` |
 | `/api/chat/conversations/[id]` | DELETE | 删除指定会话 |
+| /api/images/generate | POST | 生成书法参考图：{ prompt: string, size?: string } → { url, model, size } |
 
 路由参数：`/chat?c=<conversationId>` 打开指定会话；无参数时自动跳转至最近会话或新建。
 

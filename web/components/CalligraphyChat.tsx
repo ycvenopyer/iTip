@@ -4,12 +4,22 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { MessageAvatar } from "@/components/SealAvatar";
 
 type Vote = "up" | "down";
+
+/* ---------- 图片生成相关类型 ---------- */
+type GenImage = {
+  id: string;
+  url: string;
+  prompt: string;
+  size: string;
+  model: string;
+  createdAt: number;
+};
 
 const assistantMarkdownComponents: Components = {
     h1: ({ children }) => (
@@ -290,6 +300,15 @@ export function CalligraphyChat({
   const router = useRouter();
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
+
+  /* ---- 图片生成状态 ---- */
+  const [genOpen, setGenOpen] = useState(false);
+  const [genPrompt, setGenPrompt] = useState("");
+  const [genLoading, setGenLoading] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
+  const [genImages, setGenImages] = useState<GenImage[]>([]);
+  const genInputRef = useRef<HTMLTextAreaElement | null>(null);
+
   const hydratedRef = useRef(false);
   const transport = useMemo(
     () =>
@@ -408,6 +427,45 @@ export function CalligraphyChat({
     }
   };
 
+  /* ---- 图片生成逻辑 ---- */
+  const handleGenSubmit = useCallback(async () => {
+    const prompt = genPrompt.trim();
+    if (!prompt) return;
+    setGenLoading(true);
+    setGenError(null);
+    try {
+      const res = await fetch("/api/images/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ prompt, size: "1024x1024" }),
+      });
+      const data = (await res.json()) as { url?: string; error?: string; model?: string; size?: string };
+      if (!res.ok) { setGenError(data.error ?? "生成失败"); return; }
+      if (data.url) {
+        setGenImages((prev) => [{
+          id: crypto.randomUUID(),
+          url: data.url!,
+          prompt,
+          size: data.size ?? "1024x1024",
+          model: data.model ?? "",
+          createdAt: Date.now(),
+        }, ...prev]);
+      }
+      setGenOpen(false);
+      setGenPrompt("");
+    } catch (e) {
+      setGenError(e instanceof Error ? e.message : "生成失败");
+    } finally {
+      setGenLoading(false);
+    }
+  }, [genPrompt]);
+
+  // 打开生成面板时聚焦
+  useEffect(() => {
+    if (genOpen && genInputRef.current) genInputRef.current.focus();
+  }, [genOpen]);
+
   return (
     <div className="flex h-full flex-col relative">
       {/* 装饰性墨点 - 左上角 */}
@@ -417,7 +475,7 @@ export function CalligraphyChat({
 
       {/* 消息区域 - 占据剩余空间并可滚动 */}
       <div className="ink-scroll flex-1 overflow-y-auto relative">
-        {messages.length === 0 ? (
+        {messages.length === 0 && genImages.length === 0 ? (
           /* 空状态 - 居中显示欢迎语 - 书法风格 */
           <div className="flex h-full flex-col items-center justify-center px-6 ink-fade-in">
             <div className="max-w-md text-center">
@@ -439,7 +497,7 @@ export function CalligraphyChat({
               <p className="mb-6 text-ink-600/90 leading-relaxed">
                 可问选帖、用笔、结字、日课安排
                 <br />
-                也可上传单字/局部照片做书体与用笔讨论
+                也可上传单字/局部照片做书体与用笔讨论<br />还能生成书法风格的参考图片
               </p>
 
               <div className="flex flex-wrap justify-center gap-3 text-sm">
@@ -458,6 +516,31 @@ export function CalligraphyChat({
         ) : (
           /* 消息列表 - 书法卷轴风格 */
           <div className="mx-auto max-w-3xl space-y-8 px-4 py-8 md:px-6">
+            {/* 生成的图片卡片 */}
+            {genImages.map((img) => (
+              <div key={img.id} className="flex gap-4 ink-fade-in">
+                <div className="shrink-0 pt-1">
+                  <MessageAvatar role="assistant" />
+                </div>
+                <div className="flex-1 space-y-2 min-w-0">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-medium text-ink-500 tracking-wide">iTip · 墨图</span>
+                    <span className="h-px w-4 bg-ink-200/50" />
+                  </div>
+                  <div className="inline-block max-w-full text-left bg-paper-50/80 border border-ink-200/20 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                    <p className="text-xs text-ink-400 mb-2 italic">「{img.prompt}」</p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.url} alt={img.prompt} className="max-w-full rounded-lg border border-ink-200/20 shadow-sm" />
+                    <div className="mt-2 flex items-center gap-3">
+                      <span className="text-xs text-ink-400">{img.model}</span>
+                      <button type="button" className="text-xs text-bamboo-600 hover:underline" onClick={() => { void handleCopy(img.id, img.url); }}>复制图片链接</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* 对话消息 */}
             {messages.map((m, index) => {
               const plain = textFromParts(m);
               const isUser = m.role === "user";
@@ -667,7 +750,7 @@ export function CalligraphyChat({
             <textarea
               ref={inputRef}
               rows={1}
-              disabled={busy}
+              disabled={busy || genLoading}
               placeholder="在此书写您的书法问题…"
               className="max-h-40 min-h-[3.5rem] w-full resize-none rounded-2xl bg-transparent px-5 py-4 pr-28 text-ink-800 placeholder:text-ink-400/70 focus:outline-none font-body"
               onKeyDown={(e) => {
@@ -708,8 +791,25 @@ export function CalligraphyChat({
                     onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                   />
                 </label>
+{/* 生成图片 */}
+                <button
+                  type="button"
+                  aria-label="生成书法图片"
+                  title="AI 生成书法参考图"
+                  disabled={busy || genLoading}
+                  onClick={() => setGenOpen(!genOpen)}
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${
+                    genOpen
+                      ? "bg-cinnabar/10 text-cinnabar"
+                      : "text-ink-400 hover:bg-ink-100 hover:text-ink-600"
+                  }`}
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                  </svg>
+                </button>
                 <span className="text-xs text-ink-400/60 hidden sm:inline">
-                  支持上传书法习作图片
+                  支持上传图片或 AI 生成
                 </span>
               </div>
 
@@ -742,6 +842,67 @@ export function CalligraphyChat({
               </div>
             </div>
           </div>
+
+          
+          {/* 图片生成面板 */}
+          {genOpen && (
+            <div className="mt-3 rounded-2xl border border-cinnabar/20 bg-paper-50 p-4 shadow-lg ink-fade-in">
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="h-4 w-4 text-cinnabar" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                </svg>
+                <span className="text-sm font-medium text-ink-800">AI 生成书法参考图</span>
+                <span className="text-xs text-ink-400 ml-auto">由 cogview-3-flash 驱动</span>
+              </div>
+              <textarea
+                ref={genInputRef}
+                value={genPrompt}
+                onChange={(e) => setGenPrompt(e.target.value)}
+                placeholder="描述你想要的书法图片，例如：欧体楷书「永」字，白底黑字，高清…"
+                rows={2}
+                maxLength={1000}
+                disabled={genLoading}
+                className="w-full resize-none rounded-xl border border-ink-200/40 bg-paper-100/80 px-4 py-3 text-sm text-ink-800 placeholder:text-ink-400/60 focus:outline-none focus:ring-2 focus:ring-cinnabar/30 font-body"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenSubmit(); }
+                  if (e.key === "Escape") { setGenOpen(false); setGenPrompt(""); setGenError(null); }
+                }}
+              />
+              {genError && (
+                <p className="mt-2 text-xs text-cinnabar" role="alert">{genError}</p>
+              )}
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-xs text-ink-400">{genPrompt.length}/1000</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setGenOpen(false); setGenPrompt(""); setGenError(null); }}
+                    className="rounded-lg px-4 py-1.5 text-sm text-ink-500 transition-colors hover:bg-ink-100"
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleGenSubmit}
+                    disabled={genLoading || !genPrompt.trim()}
+                    className="flex items-center gap-1.5 rounded-lg bg-cinnabar px-5 py-1.5 text-sm text-white transition-all hover:bg-cinnabar-light disabled:opacity-50"
+                  >
+                    {genLoading ? (
+                      <>
+                        <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        生成中…
+                      </>
+                    ) : (
+                      "生成图片"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 文件显示 - 标签风格 */}
           {file && (
