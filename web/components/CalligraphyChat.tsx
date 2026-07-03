@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
@@ -510,6 +510,27 @@ export function CalligraphyChat({
                 <span className="px-4 py-2 rounded-full border border-cinnabar/30 bg-cinnabar/5 text-cinnabar">
                   兼修
                 </span>
+              </div>
+
+              {/* 快捷提问 */}
+              <div className="mt-8 flex flex-wrap justify-center gap-2">
+                {[
+                  { label: "零基础如何选帖", text: "零基础，想练毛笔楷书，每天大概半小时，该从哪本帖入手？" },
+                  { label: "执笔常见问题", text: "硬笔执笔姿势有哪些常见错误？怎么纠正？" },
+                  { label: "结字分析", text: "我的字结构总是散，怎么练习结字？请给具体的日课安排。" },
+                  { label: "硬软笔兼修", text: "硬笔行书和毛笔行书，练习时要注意什么互相照应的点？" },
+                ].map((qp) => (
+                  <button
+                    key={qp.label}
+                    type="button"
+                    className="rounded-full border border-ink-200/30 bg-paper-50 px-3 py-1.5 text-xs text-ink-500 transition-all hover:border-bamboo-300/40 hover:bg-bamboo-50/50 hover:text-bamboo-700"
+                    onClick={() => {
+                      void sendMessage({ text: qp.text });
+                    }}
+                  >
+                    {qp.label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>

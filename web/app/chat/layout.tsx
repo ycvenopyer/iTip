@@ -23,6 +23,9 @@ export default async function ChatLayout({
           <span className="max-w-[12rem] truncate" title={s.email}>
             {s.email}
           </span>
+          <Link href="/settings" className="text-sm text-ink-500 underline-offset-2 hover:underline">
+            设置
+          </Link>
           <LogoutButton />
         </nav>
       </header>
