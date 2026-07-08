@@ -1,4 +1,6 @@
-﻿# iTip
+﻿<div align="center">
+
+# iTip
 
 > 面向书法学习者的 Web 书法助手 — 硬笔、软笔、兼修对话，支持本地私有部署。
 
@@ -20,6 +22,8 @@
 [![PWA](https://img.shields.io/static/v1?style=flat-square&label=PWA&message=可安装&color=f2eadc&labelColor=524b41)](web/public/manifest.json)
 [![SEO](https://img.shields.io/static/v1?style=flat-square&label=SEO&message=robots%20%2B%20sitemap&color=f2eadc&labelColor=524b41)](web/app/sitemap.ts)
 [![JWT Auth](https://img.shields.io/static/v1?style=flat-square&label=Auth&message=JWT%20Cookie&color=f2eadc&labelColor=9a2c2c)](docs/ARCHITECTURE.md#认证与会话)
+
+</div>
 
 ## 目录
 
