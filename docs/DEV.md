@@ -1,101 +1,185 @@
-﻿# 开发与环境
+﻿# 开发指南
+
+本地开发、环境配置与生产部署说明。
 
 ## 目录
 
-- `web/`：Next 应用与全部源码、`.env.example`。
-- `docs/`：需求、架构、本文档（与实现同步维护）。
+- [前置要求](#前置要求)
+- [仓库布局](#仓库布局)
+- [环境变量](#环境变量)
+- [本地开发](#本地开发)
+- [生产部署](#生产部署)
+- [API 速查](#api-速查)
+- [安全与维护](#安全与维护)
+- [故障排查](#故障排查)
+
+## 前置要求
+
+| 依赖 | 版本 / 说明 |
+|------|-------------|
+| Node.js | 20+ |
+| npm | 9+ |
+| C++ 构建工具 | `better-sqlite3` 需要；Windows 安装 [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) |
+| LLM 服务 | 智谱 GLM、Ollama 或其它 OpenAI 兼容端点 |
+
+## 仓库布局
+
+```
+iTip/
+├── web/          # Next.js 应用（全部源码在此）
+│   ├── .env.example
+│   ├── app/icon.jpg、apple-icon.jpg
+│   ├── public/favicon.jpg、favicon.ico
+│   ├── public/icons/   # icon-192.jpg、icon-512.jpg 等
+│   └── data/     # SQLite（运行时生成，已 .gitignore）
+└── docs/         # 本文档及需求、架构说明
+```
+
+应用代码、依赖与环境配置均在 `web/` 目录下操作。
 
 ## 环境变量
 
-自 `web/.env.example` 复制为 `web/.env.local`。
-
-| 变量 | 说明 |
-|------|------|
-| `AUTH_SECRET` | 随机长字符串，用于 JWT 签名；**必填**（注册/登录会写入 Cookie）。|
-| `SITE_URL` | 可选；生产环境设为真实域名，用于 sitemap、Open Graph 等 SEO 元数据。默认 `https://itip.example.com`。|
-| `DATABASE_PATH` | 可选；默认 `web` 下 `data/itip.db`（已 `.gitignore`）。|
-| `AI_BASE_URL` | **OpenAI 兼容** API 根地址。**智谱直连**典型值：`https://open.bigmodel.cn/api/paas/v4`（套餐不同可能不同，以 [智谱文档](https://open.bigmodel.cn/dev/api) 为准）。本机 Ollama 一般为 `http://127.0.0.1:11434/v1`。`AI_*` 优先于旧名 `OPENAI_BASE_URL`。|
-| `AI_API_KEY` | 智谱等平台必填 **API Key**；**仅本机 Ollama** 时可留空（内部占位）。优先于 `OPENAI_API_KEY`。|
-| `AI_MODEL` | 模型名（控制台/服务商给出的 id）。未设置时：智谱域名默认 `glm-4-flash`，其它带 `AI_BASE_URL` 时默认 `llama3.2`，仅密钥走官方默认基地址时默认 `gpt-4o`。附图须选 **多模态** 模型。|
-| AI_IMAGE_MODEL | 图片生成模型名。智谱默认 cogview-3-flash（快速），可选 cogview-3-plus（高质量）；其他供应商默认 dall-e-3。复用 AI_BASE_URL + AI_API_KEY。 |
-| `OPENAI_API_KEY` 等 | **兼容旧名**，行为与上面对应项相同，**AI_\*** 优先。|
-
-在 `web/.env.local` 中 **至少** 配置 `AUTH_SECRET`；**对话** 需配置 **`AI_BASE_URL` + `AI_API_KEY` + `AI_MODEL`**（智谱直连）或本机 Ollama 等（见 `web/lib/ai/config.ts`）。
-
-**智谱 GLM 直连（推荐，无需 Ollama）**：在 [智谱开放平台](https://open.bigmodel.cn) 创建 API Key，使用 [OpenAI 兼容](https://open.bigmodel.cn/dev/api) 方式对接。典型三项：
-
-```env
-AI_BASE_URL=https://open.bigmodel.cn/api/paas/v4
-AI_API_KEY=<你的 Key>
-AI_MODEL=glm-4-flash
-```
-
-`AI_MODEL` 以控制台实际模型名为准（如 `glm-4-plus` 等）。**Coding 订阅**等若 Base 不同，以官方文档替换 `AI_BASE_URL`。
-
-**本机 Ollama（可选）**：安装 [Ollama](https://ollama.com) 后 `ollama pull` 模型并启动服务，`AI_BASE_URL=http://127.0.0.1:11434/v1`，`AI_API_KEY` 可留空。
-
-仓库内不提交 `.env.local`（见 `web/.gitignore`）。
-
-## 本地运行
+复制模板并编辑：
 
 ```bash
 cd web
-# 若尚无 .env.local：cp .env.example .env.local 并填好各变量
+cp .env.example .env.local   # Windows: copy .env.example .env.local
+```
+
+`.env.local` 已加入 `web/.gitignore`，**勿提交真实密钥**。
+
+### 变量一览
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `AUTH_SECRET` | **是** | JWT 签名密钥，随机长字符串（≥ 16 字符） |
+| `AI_BASE_URL` | 对话时 | OpenAI 兼容 API 根地址；智谱典型值见下方 |
+| `AI_API_KEY` | 对话时 | API Key；本机 Ollama 可留空 |
+| `AI_MODEL` | 对话时 | 对话模型 ID；未设置时按域名推断默认值 |
+| `AI_IMAGE_MODEL` | 否 | 图片生成模型；智谱默认 `cogview-3-flash` |
+| `SITE_URL` | 否 | 生产站点 URL，用于 SEO 元数据；默认 `https://itip.example.com` |
+| `DATABASE_PATH` | 否 | SQLite 路径；默认 `web/data/itip.db` |
+| `OPENAI_*` | 否 | 旧名兼容；**`AI_*` 优先** |
+
+### 智谱 GLM 直连（推荐）
+
+在 [智谱开放平台](https://open.bigmodel.cn) 创建 API Key，参考 [OpenAI 兼容文档](https://open.bigmodel.cn/dev/api)：
+
+```env
+AUTH_SECRET=your-random-secret-at-least-16-chars
+AI_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+AI_API_KEY=<你的 Key>
+AI_MODEL=glm-4-flash
+# AI_IMAGE_MODEL=cogview-3-flash
+```
+
+- `AI_MODEL` 以控制台实际模型名为准（如 `glm-4-plus`）
+- 附图对话需选用 **多模态** 模型
+- Coding 订阅等若 Base 不同，以官方文档替换 `AI_BASE_URL`
+
+### 本机 Ollama（可选）
+
+```env
+AI_BASE_URL=http://127.0.0.1:11434/v1
+AI_MODEL=llama3.2
+# AI_API_KEY 可留空
+```
+
+需先 `ollama pull` 对应模型并启动服务。
+
+### 生产 SEO
+
+```env
+SITE_URL=https://your-domain.example.com
+```
+
+同时建议将 `web/app/robots.ts` 中的 `sitemap` URL 改为与 `SITE_URL` 一致（当前为硬编码）。
+
+## 本地开发
+
+```bash
+cd web
 npm install
 npm run dev
 ```
 
-浏览器打开 `http://localhost:3000`，**注册/登录**后进入「对话」；若未配置任何 LLM 相关变量，会得到 **503** 与提示。
+- 默认地址：[http://localhost:3000](http://localhost:3000)
+- 开发模式使用 Turbopack（`next dev --turbopack`）
+- 注册 / 登录后进入 `/chat` 使用对话
 
-## 生产（私有部署）
+### npm 脚本
 
-1. 构建：
+| 脚本 | 命令 | 说明 |
+|------|------|------|
+| `dev` | `next dev --turbopack` | 开发服务器 |
+| `build` | `next build` | 生产构建 |
+| `start` | `next start` | 启动生产服务 |
+| `lint` | `next lint` | ESLint |
+
+## 生产部署
+
+### 1. 构建
+
 ```bash
 cd web
 npm run build
 ```
 
-2. 独立输出（`output: "standalone"`）产物在 `web/.next/standalone`，与官方 [Self-hosting](https://nextjs.org/docs/app/building-your-application/deploying#nodejs-server) 说明一致，需同时带上 `static` 等目录或按官方 Docker 样例组织。
+构建产物为 **standalone** 模式（见 `web/next.config.ts`）。
 
-3. 启动：
+### 2. 启动
+
 ```bash
 cd web
 npm run start
 ```
 
-默认端口 3000，可用环境变量 `PORT` 调整。
+- 默认端口 **3000**，可通过环境变量 `PORT` 调整
+- standalone 输出位于 `web/.next/standalone`，部署方式参见 Next.js [Self-hosting](https://nextjs.org/docs/app/building-your-application/deploying#nodejs-server)
 
-4. 反向代理（Nginx 等）若需 **SSE/流式**，请关闭对响应的缓冲，否则对话可能不流畅（见 [Self-hosting 流式](https://nextjs.org/docs/app/guides/self-hosting#streaming)）。
+### 3. 反向代理
+
+若使用 Nginx 等反向代理，**SSE / 流式对话** 需关闭响应缓冲，否则输出可能卡顿。参见 [Self-hosting 流式说明](https://nextjs.org/docs/app/guides/self-hosting#streaming)。
+
+### 4. 数据持久化
+
+SQLite 文件默认位于 `web/data/itip.db`。容器部署时挂载该目录或设置 `DATABASE_PATH` 指向持久卷。
+
+## API 速查
+
+完整说明见 [ARCHITECTURE.md](./ARCHITECTURE.md#api-参考)。
+
+| 方法 | 路径 | 鉴权 |
+|------|------|------|
+| POST | `/api/auth/register` | 否 |
+| POST | `/api/auth/login` | 否 |
+| POST | `/api/auth/logout` | 否 |
+| GET | `/api/auth/me` | 可选 |
+| PUT | `/api/auth/password` | 是 |
+| POST | `/api/chat` | 是 |
+| GET / POST | `/api/chat/conversations` | 是 |
+| GET / PATCH / DELETE | `/api/chat/conversations/[id]` | 是 |
+| POST | `/api/images/generate` | 是 |
+
+对话页路由：`/chat?c=<conversationId>`；无 `c` 时跳转最近会话或自动新建。
+
+品牌图标为 `web/` 下 JPEG / ICO 静态资源，路径与更换方式见 [BADGES.md](./BADGES.md#图标文件)。
 
 ## 安全与维护
 
-- 保持 `next` 在官方公告的**当前修复线**上（如 15.2.8+ 对 [2025-12-11 安全更新](https://nextjs.org/blog/security-update-2025-12-11) 的覆盖）；升级后运行 `npm run build` 并更新本文档中版本句。
-- 鉴权在 API 中校验；勿仅信任中间件（参见 [App Router 认证](https://nextjs.org/docs/app/guides/authentication)）。
+- 保持 `next` 在官方公告的当前修复线（如 15.2.8+）；升级后执行 `npm run build` 并更新文档中的版本描述
+- 鉴权逻辑在 API Route Handler 内校验，不依赖 Middleware 拦截
+- 速率限制为进程内内存实现；多实例部署时各实例独立计数，高并发场景可替换为 Redis / Upstash
 
-## 会话管理 API（供参考）
+## 故障排查
 
-前端通过以下 REST 端点管理多会话（均需登录 Cookie）：
-
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/api/chat/conversations` | GET | 获取当前用户的所有会话列表（含置顶标记） |
-| `/api/chat/conversations` | POST | 创建新会话，返回 `{ id }` |
-| `/api/chat/conversations/[id]` | PATCH | 重命名或置顶：`{ title?: string, pinned?: boolean }` |
-| `/api/chat/conversations/[id]` | DELETE | 删除指定会话 |
-| /api/images/generate | POST | 生成书法参考图：{ prompt: string, size?: string } → { url, model, size } |
-
-路由参数：`/chat?c=<conversationId>` 打开指定会话；无参数时自动跳转至最近会话或新建。
-
-## SEO 与 PWA
-
-- `robots.ts`：自动生成 robots.txt，禁止 `/api/*` 和 `/chat?*` 被索引。
-- `sitemap.ts`：自动生成 sitemap.xml，包含首页、登录、注册页。
-- `manifest.json`：支持 PWA 安装，提供桌面图标和离线缓存。
-- 设置 `SITE_URL` 环境变量即可自动适配生产环境 URL。
-
-## 常见故障
-
-- **`better-sqlite3` 编译失败**：需安装本机 C++ 构建环境（如 Windows 的 `windows-build-tools` 或 Visual Studio Build Tools）。
-- **对话 503**：智谱未填 `AI_API_KEY` / Base 错误，或未配置任何 LLM 变量，或接口不可达（如 Ollama 未启动）。
-- **附图无效**：当前模型需支持多模态；在 `.env` 中更换为带 vision 的模型名。
-- **会话列表为空/异常**：检查 `chat_conversations` 表结构（`lib/db.ts` 会自动迁移，若旧版本可手动添加 `pinned` 列）。
+| 现象 | 可能原因 | 处理 |
+|------|----------|------|
+| `better-sqlite3` 编译失败 | 缺少 C++ 构建环境 | 安装 Visual Studio Build Tools 后重试 `npm install` |
+| 对话 **503** | 未配置 LLM 或 Key / Base 错误 | 检查 `AI_*` 变量；Ollama 是否已启动 |
+| 附图无响应 | 模型不支持多模态 | 更换为带 vision 能力的模型 |
+| 图片生成失败 | 未配置图片模型或端点不支持 | 设置 `AI_IMAGE_MODEL`；确认服务商支持 `/v1/images/generations` |
+| 会话列表异常 | 旧库缺少 `pinned` 列 | `lib/db.ts` 启动时会尝试迁移；必要时手动 `ALTER TABLE` |
+| 流式输出卡顿 | 反向代理缓冲 SSE | 关闭 Nginx 等 `proxy_buffering` |
+| PWA 无法离线 | 预期行为 | 当前无 Service Worker，仅支持安装到主屏幕 |
+| SEO sitemap 域名不对 | `robots.ts` 硬编码 | 设置 `SITE_URL` 并修改 `robots.ts` 中 sitemap 地址 |

@@ -23,5 +23,5 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   // 排除静态资源和 API（API 已有自己的安全校验）
-  matcher: "/((?!api|_next/static|_next/image|favicon.ico|icons|manifest.json|robots.txt|sitemap.xml).*)",
+  matcher: "/((?!api|_next/static|_next/image|favicon.ico|favicon.jpg|icons|manifest.json|robots.txt|sitemap.xml).*)",
 };
