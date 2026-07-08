@@ -1,6 +1,6 @@
 ﻿<div align="center">
 
-# iTip
+<img src="web/public/icons/icon-512.jpg" alt="iTip" width="128" height="128" />
 
 > 面向书法学习者的 Web 书法助手 — 硬笔、软笔、兼修对话，支持本地私有部署。
 
@@ -27,6 +27,7 @@
 
 ## 目录
 
+- [目录](#目录)
 - [简介](#简介)
 - [功能特性](#功能特性)
 - [技术栈](#技术栈)
