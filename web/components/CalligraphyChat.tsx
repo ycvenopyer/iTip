@@ -299,7 +299,10 @@ export function CalligraphyChat({
 }: CalligraphyChatProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [previews, setPreviews] = useState<string[]>([]);
 
   /* ---- 图片生成状态 ---- */
   const [genOpen, setGenOpen] = useState(false);
@@ -307,9 +310,51 @@ export function CalligraphyChat({
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [genImages, setGenImages] = useState<GenImage[]>([]);
+  const [genSize, setGenSize] = useState<"1024x1024" | "768x1024" | "1024x768">("1024x1024");
   const genInputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const hydratedRef = useRef(false);
+  /* ---- 文件上传辅助 ---- */
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/bmp"];
+
+  const validateAndAddFiles = useCallback((newFiles: FileList | File[]) => {
+    setFileError(null);
+    const arr = Array.from(newFiles);
+    const valid = [];
+    for (const f of arr) {
+      if (!ACCEPTED_TYPES.includes(f.type)) { setFileError("不支持的文件类型：" + f.name); continue; }
+      if (f.size > MAX_FILE_SIZE) { setFileError("图片过大（" + (f.size / 1024 / 1024).toFixed(1) + "MB），上限 10MB"); continue; }
+      valid.push(f);
+    }
+    const total = [...files, ...valid].slice(0, 5);
+    setFiles(total);
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files]);
+
+  const removeFile = useCallback((index: number) => { setFiles((prev: File[]) => prev.filter((_: File, i: number) => i !== index)); }, []);
+  const clearFiles = useCallback(() => { setFiles([]); setPreviews([]); setFileError(null); }, []);
+
+  useEffect(() => {
+    const urls = files.map(f => URL.createObjectURL(f));
+    setPreviews(urls);
+    return () => { for (const u of urls) URL.revokeObjectURL(u); };
+  }, [files]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOver(true); }, []);
+  const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOver(false); }, []);
+  const handleDrop = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOver(false); if (e.dataTransfer.files.length > 0) validateAndAddFiles(e.dataTransfer.files); }, [validateAndAddFiles]);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) { const f = items[i].getAsFile(); if (f) imageFiles.push(f); }
+    }
+    if (imageFiles.length > 0) { e.preventDefault(); validateAndAddFiles(imageFiles); }
+  }, [validateAndAddFiles]);
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -438,7 +483,7 @@ export function CalligraphyChat({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ prompt, size: "1024x1024" }),
+        body: JSON.stringify({ prompt, size: genSize }),
       });
       const data = (await res.json()) as { url?: string; error?: string; model?: string; size?: string };
       if (!res.ok) { setGenError(data.error ?? "生成失败"); return; }
@@ -452,6 +497,8 @@ export function CalligraphyChat({
           createdAt: Date.now(),
         }, ...prev]);
       }
+      const imgMarkdown = "【墨图生成】\n![](" + data.url + ")\n> prompt: " + prompt + "\n> 模型: " + (data.model ?? "");
+      void sendMessage({ text: imgMarkdown });
       setGenOpen(false);
       setGenPrompt("");
     } catch (e) {
@@ -459,7 +506,8 @@ export function CalligraphyChat({
     } finally {
       setGenLoading(false);
     }
-  }, [genPrompt]);
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [genPrompt, genSize]);
 
   // 打开生成面板时聚焦
   useEffect(() => {
@@ -467,8 +515,20 @@ export function CalligraphyChat({
   }, [genOpen]);
 
   return (
-    <div className="flex h-full flex-col relative">
+    <div className="flex h-full flex-col relative" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onPaste={handlePaste}>
       {/* 装饰性墨点 - 左上角 */}
+      {/* 拖拽放置覆盖层 */}
+      {dragOver && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-ink-900/40 backdrop-blur-sm transition-all">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-bamboo-400/60 bg-paper-50/90 px-8 py-6 shadow-2xl">
+            <svg className="h-10 w-10 text-bamboo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+            <p className="font-body text-sm text-ink-700">释放以上传图片</p>
+            <p className="text-xs text-ink-400">支持 PNG / JPEG / WebP，单张 ≤ 10MB</p>
+          </div>
+        </div>
+      )}
       <div className="absolute top-4 left-4 w-16 h-16 rounded-full bg-gradient-to-br from-ink-200/20 to-transparent blur-xl pointer-events-none" />
       {/* 装饰性墨点 - 右下角 */}
       <div className="absolute bottom-20 right-8 w-24 h-24 rounded-full bg-gradient-to-tl from-bamboo-500/10 to-transparent blur-2xl pointer-events-none" />
@@ -554,7 +614,9 @@ export function CalligraphyChat({
                     <img src={img.url} alt={img.prompt} className="max-w-full rounded-lg border border-ink-200/20 shadow-sm" />
                     <div className="mt-2 flex items-center gap-3">
                       <span className="text-xs text-ink-400">{img.model}</span>
-                      <button type="button" className="text-xs text-bamboo-600 hover:underline" onClick={() => { void handleCopy(img.id, img.url); }}>复制图片链接</button>
+                                            <a href={img.url} target="_blank" rel="noreferrer" className="text-xs text-bamboo-600 hover:underline" download>下载</a>
+                                            <button type="button" className="text-xs text-ink-400 hover:text-ink-600" onClick={() => { setGenPrompt(img.prompt); setGenSize(img.size as "1024x1024" | "768x1024" | "1024x768"); setGenOpen(true); setTimeout(() => genInputRef.current?.focus(), 50); }}>重新生成</button>
+                                            <button type="button" className="text-xs text-bamboo-600 hover:underline" onClick={() => { void handleCopy(img.id, img.url); }}>复制链接</button>
                     </div>
                   </div>
                 </div>
@@ -745,14 +807,14 @@ export function CalligraphyChat({
             e.preventDefault();
             const el = inputRef.current;
             const text = el?.value?.trim() ?? "";
-            if (!text && !file) return;
-            if (file) {
+            if (!text && files.length === 0) return;
+            if (files.length > 0) {
               const list = new DataTransfer();
-              list.items.add(file);
+              for (const f of files) list.items.add(f);
               if (text)
                 await sendMessage({ text, files: list.files });
               else await sendMessage({ files: list.files });
-              setFile(null);
+              clearFiles();
             } else {
               await sendMessage({ text });
             }
@@ -809,7 +871,7 @@ export function CalligraphyChat({
                     accept="image/*"
                     className="hidden"
                     disabled={busy}
-                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                    onChange={(e) => { if (e.target.files) validateAndAddFiles(e.target.files); e.target.value = ""; }}
                   />
                 </label>
 {/* 生成图片 */}
@@ -830,7 +892,7 @@ export function CalligraphyChat({
                   </svg>
                 </button>
                 <span className="text-xs text-ink-400/60 hidden sm:inline">
-                  支持上传图片或 AI 生成
+                  上传 / 拖拽 / 粘贴图片，或 AI 生成
                 </span>
               </div>
 
@@ -868,7 +930,24 @@ export function CalligraphyChat({
           {/* 图片生成面板 */}
           {genOpen && (
             <div className="mt-3 rounded-2xl border border-cinnabar/20 bg-paper-50 p-4 shadow-lg ink-fade-in">
-              <div className="flex items-center gap-2 mb-3">
+                            {/* 尺寸选择器 */}
+                            <div className="mb-3 flex items-center gap-2">
+                              <span className="text-xs text-ink-400">尺寸：</span>
+                              {(["1024x1024","768x1024","1024x768"] as const).map((sz) => {
+                                const label = sz === "1024x1024" ? "方" : sz === "768x1024" ? "竖" : "横";
+                                return (
+                                  <button key={sz} type="button"
+                                    onClick={() => setGenSize(sz)}
+                                    className={`rounded-lg px-3 py-1 text-xs transition-all ${
+                                      genSize === sz
+                                        ? "bg-cinnabar text-white shadow-sm"
+                                        : "border border-ink-200/30 bg-paper-100/80 text-ink-500 hover:border-cinnabar/30"
+                                    }`}
+                                  >{label}</button>
+                                );
+                              })}
+                            </div>
+                            <div className="flex items-center gap-2 mb-3">
                 <svg className="h-4 w-4 text-cinnabar" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
                 </svg>
@@ -925,23 +1004,30 @@ export function CalligraphyChat({
             </div>
           )}
 
-          {/* 文件显示 - 标签风格 */}
-          {file && (
-            <div className="mt-2 flex items-center gap-2 rounded-lg border border-bamboo-200/30 bg-bamboo-50/30 px-3 py-2 text-sm">
-              <svg className="h-4 w-4 text-bamboo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a2.25 2.25 0 002.25-2.25V6a2.25 2.25 0 00-2.25-2.25H3.75A2.25 2.25 0 001.5 6v12a2.25 2.25 0 002.25 2.25z" />
-              </svg>
-              <span className="flex-1 truncate text-ink-600">{file.name}</span>
-              <button
-                type="button"
-                aria-label="移除图片"
-                title="移除图片"
-                className="rounded p-1 text-ink-400 hover:bg-ink-200/50 hover:text-ink-600"
-                onClick={() => setFile(null)}
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+          {/* 图片预览缩略图 */}
+          {files.length > 0 && (
+            <div className="mt-2 space-y-2">
+              {fileError && (<p className="text-xs text-cinnabar" role="alert">{fileError}</p>)}
+              <div className="flex flex-wrap gap-2">
+                {files.map((f, i) => (
+                  <div key={i} className="group relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-ink-200/20">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={previews[i] || ""} alt={f.name} className="h-full w-full object-cover" />
+                    <div className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-ink-900/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="truncate px-1 pb-1 text-[10px] text-paper-50">{f.name}</span>
+                    </div>
+                    <button type="button" aria-label={"移除 " + f.name}
+                      className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink-700 text-paper-50 opacity-0 shadow transition-opacity group-hover:opacity-100"
+                      onClick={() => removeFile(i)}>
+                      <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" className="text-xs text-ink-400 hover:text-ink-600" onClick={clearFiles}>
+                清除全部 ({files.length} 张)
               </button>
             </div>
           )}
