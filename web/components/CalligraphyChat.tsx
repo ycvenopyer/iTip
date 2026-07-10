@@ -302,7 +302,7 @@ export function CalligraphyChat({
   const [files, setFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [previews, setPreviews] = useState<string[]>([]);
+
 
   /* ---- 图片生成状态 ---- */
   const [genOpen, setGenOpen] = useState(false);
@@ -333,13 +333,11 @@ export function CalligraphyChat({
   }, [files]);
 
   const removeFile = useCallback((index: number) => { setFiles((prev: File[]) => prev.filter((_: File, i: number) => i !== index)); }, []);
-  const clearFiles = useCallback(() => { setFiles([]); setPreviews([]); setFileError(null); }, []);
+  const clearFiles = useCallback(() => { setFiles([]); setFileError(null); }, []);
 
-  useEffect(() => {
-    const urls = files.map(f => URL.createObjectURL(f));
-    setPreviews(urls);
-    return () => { for (const u of urls) URL.revokeObjectURL(u); };
-  }, [files]);
+  // 预览 URL 通过记忆函数直接生成，避免 src="" 问题
+  const getPreviewUrl = useCallback((f: File) => URL.createObjectURL(f), []);
+  const previewUrls = useMemo(() => files.map(getPreviewUrl), [files, getPreviewUrl]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOver(true); }, []);
   const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOver(false); }, []);
@@ -1012,7 +1010,7 @@ export function CalligraphyChat({
                 {files.map((f, i) => (
                   <div key={i} className="group relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-ink-200/20">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={previews[i] || ""} alt={f.name} className="h-full w-full object-cover" />
+                    <img src={previewUrls[i]} alt={f.name} className="h-full w-full object-cover" />
                     <div className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-ink-900/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
                       <span className="truncate px-1 pb-1 text-[10px] text-paper-50">{f.name}</span>
                     </div>
