@@ -1,209 +1,49 @@
-﻿# 架构说明
-
-iTip 全栈应用位于 `web/`，本文档与源码对齐。
-
-## 目录
-
-- [技术栈](#技术栈)
-- [系统概览](#系统概览)
-- [前后端边界](#前后端边界)
-- [目录结构](#目录结构)
-- [数据模型](#数据模型)
-- [认证与会话](#认证与会话)
-- [对话流程](#对话流程)
-- [API 参考](#api-参考)
-- [前端组件](#前端组件)
-- [安全](#安全)
-- [SEO 与 PWA](#seo-与-pwa)
-
-## 技术栈
-
-| 类别 | 技术 |
-|------|------|
-| 框架 | Next.js **15.2.8+**（App Router、`standalone`） |
-| UI | React **19**、Tailwind **v4** |
-| AI | Vercel AI SDK **6** |
-| 数据 | SQLite（`better-sqlite3`），默认 `web/data/itip.db` |
-| 鉴权 | JWT（`jose`）、bcrypt；Cookie `itip_session` |
-| 校验 | Zod **4** |
-
-版本见 `web/package-lock.json`；安全公告见 [Next.js 博客](https://nextjs.org/blog/security-update-2025-12-11)。
-
-## 系统概览
+# iTip 架构
 
 ```mermaid
 flowchart LR
-  Browser[浏览器]
-  MW[Middleware]
-  Pages[App 页面]
-  API[Route Handlers]
-  DB[(SQLite)]
-  LLM[OpenAI 兼容 API]
-
-  Browser --> MW --> Pages
-  Browser --> API
-  API --> DB
-  API --> LLM
+  B[浏览器与现有 React 界面] --> N[Next.js 页面与同域 API 代理]
+  N --> F[Flask 鉴权与 API]
+  F --> P[(PostgreSQL)]
+  F --> L[LangGraph]
+  L --> Q[提取当前问题与上一轮问题]
+  Q --> R[匹配实体别名与扩展图关系]
+  R --> P
+  R --> A[按来源组织证据并生成回答]
+  A --> M[OpenAI 兼容文本或视觉模型]
+  A -->|AI SDK SSE| B
+  F --> I[OpenAI 兼容出图模型]
 ```
 
-- 受保护 API 在 Handler 内 `getSession()`，失败返回 401
-- Middleware 仅注入安全头，不做登录拦截
-- 对话经 AI SDK 以 UI Message Stream 流式返回
+`frontend/` 使用 Next.js 15、React 19、Tailwind 和 AI SDK `useChat`。服务端页面从 Flask 获取登录状态和会话数据。浏览器发出同域 `/api/*` 请求，Next.js 转发 Cookie、状态码和流式响应。`backend/` 中的 Flask 负责账号、PostgreSQL 访问和模型调用。
 
-## 前后端边界
-
-仓库无独立 `frontend/` / `backend/` 目录。`web/` 开发、生产均单进程对外（`npm run dev` / `standalone`）。
-
-| 侧 | 路径 | 环境 | 职责 |
-|----|------|------|------|
-| 前端 | `components/`、`public/`、`app/page.tsx` 等 | 浏览器 | UI、交互、`fetch /api/*` |
-| 后端 | `app/api/`、`lib/` | Node | 鉴权、SQLite、LLM、限速 |
-| 协作 | `app/chat/` 等 Server Component | Node → 浏览器 | 服务端取数，客户端渲染 |
-| 边界 | `middleware.ts` | Edge / Node | 安全响应头 |
-
-**`app/` 双轨**：`app/chat/page.tsx` 响应 `/chat`（HTML）；`app/api/chat/route.ts` 响应 `/api/chat`（JSON / SSE）。属 [App Router 约定](https://nextjs.org/docs/app/building-your-application/routing)。
-
-**`lib/` 规则**：仅服务端 import；客户端共享类型用 `import type`（如 `ChatConversationSummary`）。
-
-```mermaid
-sequenceDiagram
-  participant B as 浏览器
-  participant P as Server Component
-  participant A as app/api
-  participant L as lib
-  participant D as SQLite
-
-  P->>L: getSession / listConversations
-  L->>D: 查询
-  P->>B: HTML + props
-  B->>A: POST /api/chat
-  A->>L: streamText
-  A-->>B: SSE
-  B->>A: PATCH conversations/[id]
-  L->>D: 持久化
-```
-
-## 目录结构
-
-```
-web/
-├── app/
-│   ├── api/              # 后端 API
-│   ├── chat/、login/、register/、settings/
-│   ├── page.tsx          # 客户端首页
-│   ├── icon.jpg、apple-icon.jpg
-│   └── layout.tsx、globals.css、loading/error/not-found、robots、sitemap
-├── components/           # 前端（均为 use client）
-├── lib/                  # 后端逻辑
-│   ├── ai/、auth/、db.ts、chat-store.ts、rate-limit.ts
-├── public/               # 静态资源、PWA 图标
-├── middleware.ts
-└── .env.example
-```
+LangGraph 的三个节点依次准备检索问题、检索知识图谱并生成流式回答。检索用简繁别名定位实体，在来源支撑的关系里扩展一跳，再按直接匹配和相关实体对证据排序。回答末尾附上检索到的来源链接。这一版本以关系图和文本匹配做本地图谱检索，资料规模小，可通过结构化导入扩充。
 
 ## 数据模型
 
-由 `lib/db.ts` 首次访问时初始化。
-
-### `users`
-
-| 列 | 说明 |
-|----|------|
-| `id` | TEXT PK，UUID |
-| `email` | TEXT UNIQUE |
-| `password_hash` | bcrypt |
-| `created_at` | Unix ms |
-
-### `chat_conversations`
-
-| 列 | 说明 |
-|----|------|
-| `id` | TEXT PK |
-| `user_id` | FK → `users(id)` ON DELETE CASCADE |
-| `title` | 空则从首条用户消息推导 |
-| `messages_json` | `UIMessage[]` JSON |
-| `pinned` | 0 / 1 |
-| `created_at`、`updated_at` | Unix ms |
-
-索引：`(user_id, updated_at DESC)`。
+- `users` 保存邮箱和 bcrypt 密码哈希。
+- `chat_conversations` 保存所属用户、标题、置顶状态、时间戳和 AI SDK 消息 JSON。
+- `rate_limits` 保存 HMAC 后的限速键及过期时间，多个运行实例共享计数。
+- `kb_sources`、`kb_entities`、`kb_terms`、`kb_source_entities`、`kb_edges` 保存书法资料、实体、别名、出处关联和带出处的关系。知识库查询独立于用户会话。
+- 本地和生产均使用 PostgreSQL，由 [`backend/schema.sql`](../backend/schema.sql) 初始化。后端通过 psycopg 执行参数化 SQL。
 
 ## 认证与会话
 
-| 项 | 值 |
-|----|-----|
-| Cookie | `itip_session`，JWT HS256，7 天 |
-| 密钥 | `AUTH_SECRET`（≥ 16 字符） |
-| 生产 | `secure: true` |
+用户登录后收到有效期七天的签名 JWT，放在 HttpOnly、SameSite=Lax Cookie 中，Vercel 生产环境启用 Secure。Flask 会验证签名、有效期和账号是否仍存在。查询、更新和删除会话均校验所属用户。前端服务端与 Flask 之间使用共享密钥。用户可通过页面删除会话。
 
-受保护页（`/chat`、`/settings`）在 Server Component 中校验，未登录 `redirect("/login")`。
+对话消息、附图及检索所得资料摘要会进入配置的模型服务，出图服务收到出图提示词。对话自动保存到 PostgreSQL，附图跟随消息存储。消息 JSON 未做应用层加密。服务商的留存政策及生成图片 URL 的有效期由服务商决定。数据库连接串、模型密钥和代理密钥不提交至 Git。
 
-## 对话流程
+## 接口
 
-1. `/chat?c=<id>`：解析或创建会话，加载消息
-2. 用户发消息 → `POST /api/chat`（Cookie）
-3. 服务端：`streamText`（system + few-shot + 用户消息，中文 `smoothStream`）
-4. 客户端 debounce 450ms → `PATCH /api/chat/conversations/[id]` 保存
+| 方法 | 路径 | 用途 |
+|---|---|---|
+| GET | `/api/health` | 检查数据库及导入来源数量 |
+| POST | `/api/auth/register`、`/api/auth/login`、`/api/auth/logout` | 注册、登录、退出 |
+| GET | `/api/auth/me` | 当前登录用户 |
+| PUT | `/api/auth/password` | 修改密码 |
+| GET / POST | `/api/chat/conversations` | 列表与新建 |
+| GET / PATCH / DELETE | `/api/chat/conversations/[id]` | 读取、保存、重命名、置顶或删除 |
+| POST | `/api/chat` | LangGraph 书法对话，返回 AI SDK UI 消息 SSE |
+| POST | `/api/images/generate` | 生成参考图 |
 
-## API 参考
-
-受保护端点需有效 `itip_session`，除非注明。
-
-### 认证
-
-| 方法 | 路径 | 鉴权 | 说明 |
-|------|------|------|------|
-| POST | `/api/auth/register` | 否 | `{ email, password }`，密码 ≥ 8 |
-| POST | `/api/auth/login` | 否 | 写入 JWT Cookie |
-| POST | `/api/auth/logout` | 否 | 清除 Cookie |
-| GET | `/api/auth/me` | 可选 | `{ user \| null }` |
-| PUT | `/api/auth/password` | 是 | `{ currentPassword, newPassword }` |
-
-### 对话与会话
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/chat` | 流式对话；LLM 未配置时 503 |
-| GET | `/api/chat/conversations` | 列表（置顶优先） |
-| POST | `/api/chat/conversations` | 新建，返回 `{ id }` |
-| GET | `/api/chat/conversations/[id]` | `{ id, title, messages }` |
-| PATCH | `/api/chat/conversations/[id]` | `{ messages }` / `{ title }` / `{ pinned }` 三选一 |
-| DELETE | `/api/chat/conversations/[id]` | 删除 |
-
-### 图片
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/images/generate` | `{ prompt, size? }` → `{ url, model, size }` |
-
-## 前端组件
-
-| 组件 | 职责 |
-|------|------|
-| `ChatShell` | 侧栏 + 主区域 |
-| `CalligraphyChat` | 流式聊天、Markdown、附图、图片生成 |
-| `LoginForm` / `RegisterForm` / `SettingsForm` | 账号表单 |
-| `LogoutButton` | 登出 |
-| `InkCursor` | 首页墨滴光标 |
-| `SealAvatar` | 印章头像 |
-
-## 安全
-
-**Middleware**：CSP、X-Frame-Options DENY 等；`matcher` 排除 `api`、静态资源、`favicon.*`、`icons/`。
-
-**限速**（内存 Map，单机适用）：
-
-| 端点 | 限制 |
-|------|------|
-| 登录 | 10/IP/min；5/邮箱/5min |
-| 注册、改密 | 5/IP/10min |
-| 图片生成 | 10/IP/10min |
-| 对话 | 无 |
-
-## SEO 与 PWA
-
-| 项 | 实现 |
-|----|------|
-| 元数据 | `layout.tsx` + `SITE_URL`；图标由 `app/icon.jpg` 生成 |
-| robots / sitemap | `robots.ts`、`sitemap.ts`（sitemap URL 当前硬编码，生产需改） |
-| PWA | `manifest.json` → `icon-192/512.jpg`；无 Service Worker |
-| 图标路径 | 见 [BADGES.md](./BADGES.md) |
+部署和扩充资料的操作见 [开发与部署指南](DEV.md)。

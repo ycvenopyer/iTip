@@ -1,15 +1,26 @@
-# Monorepo root: web app under web/
-web/node_modules/
-web/.next/
-web/out/
-web/data/
-web/.env
-web/.env.local
-web/.env.*.local
-web/*.tsbuildinfo
-web/.vercel
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+.vercel/
 
-# OS / IDE
+# Frontend build and test output
+node_modules/
+.next/
+/frontend/out/
+/frontend/coverage/
+/frontend/.playwright/
+next-env.d.ts
+*.tsbuildinfo
+
+# Backend runtime and local data
+.venv*/
+__pycache__/
+*.py[cod]
+/.local-data/
+
+# OS and editor files
 .DS_Store
 Thumbs.db
 .idea/

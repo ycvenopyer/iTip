@@ -1,0 +1,120 @@
+{
+  "entities": [
+    {"id":"shupu","name":"书谱","kind":"法帖与书论","aliases":["書譜","书谱序","書譜序"]},
+    {"id":"sun","name":"孙过庭","kind":"书家","aliases":["孫過庭","孙虔礼","孫虔禮"]},
+    {"id":"cursive","name":"草书","kind":"书体","aliases":["草書"]},
+    {"id":"wang","name":"王羲之","kind":"书家","aliases":["王右军","王右軍"]},
+    {"id":"lanting","name":"兰亭序","kind":"法帖","aliases":["蘭亭序","兰亭集序","蘭亭集序","兰亭帖"]},
+    {"id":"running","name":"行书","kind":"书体","aliases":["行書"]},
+    {"id":"shenlong","name":"神龙本","kind":"摹本","aliases":["神龍本","冯摹兰亭","馮摹蘭亭"]},
+    {"id":"feng","name":"冯承素","kind":"书家","aliases":["馮承素"]},
+    {"id":"dingwu","name":"定武兰亭","kind":"刻帖","aliases":["定武蘭亭","定武本"]},
+    {"id":"yong-eight","name":"永字八法","kind":"笔法","aliases":["八法","永字"]},
+    {"id":"yong","name":"永","kind":"字","aliases":[]},
+    {"id":"regular","name":"楷书","kind":"书体","aliases":["楷書","正楷"]},
+    {"id":"shuowen","name":"说文解字","kind":"字书","aliases":["說文解字","说文","說文","永部"]},
+    {"id":"xushen","name":"许慎","kind":"学者","aliases":["許慎"]},
+    {"id":"ou","name":"欧阳询","kind":"书家","aliases":["歐陽詢","欧体","歐體"]},
+    {"id":"jiucheng","name":"九成宫醴泉铭","kind":"碑刻","aliases":["九成宮醴泉銘","九成宫","九成宮"]},
+    {"id":"yan","name":"颜真卿","kind":"书家","aliases":["顏真卿","颜体","顏體","颜鲁公"]},
+    {"id":"jizhi","name":"祭侄文稿","kind":"法帖","aliases":["祭姪文稿","祭侄稿"]},
+    {"id":"duobao","name":"多宝塔碑","kind":"碑刻","aliases":["多寶塔碑","多宝塔感应碑","多寶塔感應碑"]},
+    {"id":"liu","name":"柳公权","kind":"书家","aliases":["柳公權","柳体","柳體"]},
+    {"id":"xuanmi","name":"玄秘塔碑","kind":"碑刻","aliases":["玄秘塔"]},
+    {"id":"zhao","name":"赵孟頫","kind":"书家","aliases":["趙孟頫","赵体","趙體"]},
+    {"id":"luoshen","name":"洛神赋","kind":"法帖","aliases":["洛神賦"]}
+  ],
+  "sources": [
+    {
+      "id":"npm-shupu","title":"国立故宫博物院 · 书谱","kind":"帖碑",
+      "url":"https://theme.npm.edu.tw/selection/Article.aspx?sNo=04001002",
+      "summary":"国立故宫博物院赏析页介绍孙过庭的《书谱》卷。墨迹以草书书写，讨论作者的学书经验与书法学习原理，因此兼有法帖和书论的价值。",
+      "entities":["shupu","cursive"],
+      "edges":[["shupu","作者","sun"],["shupu","书体","cursive"]]
+    },
+    {
+      "id":"tcmb-shupu","title":"国家文化记忆库 · 唐孙过庭书谱卷","kind":"网站",
+      "url":"https://tcmb.culture.tw/zh-tw/detail?id=20120326000055&indexCode=BOCH_CountryCulture_61",
+      "summary":"文化资产条目区分原拟撰写的全书与现存卷，现藏卷为上卷的总序。条目也介绍其草书用笔及受王羲之章草影响的观察。",
+      "entities":["shupu"],
+      "edges":[["shupu","条目提及的书风渊源","wang"]]
+    },
+    {
+      "id":"dpm-shenlong","title":"故宫博物院 · 冯承素行书摹兰亭序卷","kind":"帖碑",
+      "url":"https://www.dpm.org.cn/collection/handwriting/228279.html",
+      "summary":"故宫博物院藏行书摹本，传统归于唐人冯承素，卷上可见神龙印，故俗称神龙本。讲解时应区分王羲之所作序文与现存唐摹写本。",
+      "entities":["lanting","shenlong"],
+      "edges":[["lanting","作者","wang"],["lanting","书体","running"],["shenlong","摹自","lanting"],["shenlong","传统归属","feng"]]
+    },
+    {
+      "id":"dpm-lanting-editions","title":"故宫博物院 · 《兰亭序》重要传本简说","kind":"文献",
+      "url":"https://www.dpm.org.cn/handwritings/talk/209563.html",
+      "summary":"介绍《兰亭序》的墨迹摹本与刻帖流传。神龙本属于墨迹摹本，定武本属于石刻帖系统，两者可用于比较不同传本媒介。",
+      "entities":["lanting","shenlong","dingwu"],
+      "edges":[["dingwu","刻帖传本","lanting"],["shenlong","墨迹摹本","lanting"]]
+    },
+    {
+      "id":"npm-lanting-exhibition","title":"国立故宫博物院 · 以文会友雅集图特展","kind":"网站",
+      "url":"https://theme.npm.edu.tw/exh108/ElegantGatherings/ch/page-3.html",
+      "summary":"展览说明兰亭雅集与王羲之作序的背景，并介绍馆藏定武兰亭宋拓本及其鉴藏记录。",
+      "entities":["lanting","dingwu","wang"],
+      "edges":[["dingwu","刻帖传本","lanting"]]
+    },
+    {
+      "id":"moe-yong","title":"教育部《重编国语辞典修订本》 · 永字八法","kind":"字典",
+      "url":"https://dict.revised.moe.edu.tw/dictView.jsp?ID=165970&la=0&powerMode=0",
+      "summary":"用“永”字举例说明正楷点画的基本运笔。八个名称是侧、勒、努、趯、策、掠、啄、磔，涵盖点、横、竖、钩、上挑、撇和捺的不同用法。",
+      "entities":["yong-eight"],
+      "edges":[["yong-eight","示范字","yong"],["yong-eight","适用书体","regular"]]
+    },
+    {
+      "id":"ctext-shuowen","title":"中国哲学书电子化计划 · 《说文解字》","kind":"字典",
+      "url":"https://ctext.org/shuo-wen-jie-zi",
+      "summary":"《说文解字》的电子文本目录包括永部。适合查阅古文字的部首和释字，应与当代笔顺、正楷用笔等资料配合使用。",
+      "entities":["shuowen"],
+      "edges":[["shuowen","作者","xushen"],["shuowen","设有该字部","yong"]]
+    },
+    {
+      "id":"dpm-jiucheng","title":"故宫博物院 · 宋拓唐九成宫醴泉铭","kind":"帖碑",
+      "url":"https://www.dpm.org.cn/collection/impres/234546.html",
+      "summary":"故宫藏北宋拓本，亦称李祺本。碑文为欧阳询晚年书写，临习时可细看字内空间以及横竖相接的方式。",
+      "entities":["jiucheng"],
+      "edges":[["jiucheng","书丹","ou"],["jiucheng","书体","regular"]]
+    },
+    {
+      "id":"dpm-jiucheng-study","title":"故宫博物院 · 《九成宫醴泉铭碑》技法精讲","kind":"文献",
+      "url":"https://www.dpm.org.cn/journal_detail/111880.html",
+      "summary":"故宫出版的碑帖技法读物简介，围绕欧阳询《九成宫醴泉铭碑》讲解临写，可与馆藏宋拓本对照阅读。",
+      "entities":["jiucheng","ou","regular"],
+      "edges":[]
+    },
+    {
+      "id":"npm-jizhi","title":"国立故宫博物院 · 祭姪文稿","kind":"帖碑",
+      "url":"https://theme.npm.edu.tw/selection/Article.aspx?sNo=04001003",
+      "summary":"馆藏赏析介绍颜真卿为亲属遇难所作祭文草稿的历史背景。读帖可观察行书中的涂改、行距和节奏变化。",
+      "entities":["jizhi"],
+      "edges":[["jizhi","书写者","yan"],["jizhi","书体","running"]]
+    },
+    {
+      "id":"dpm-duobao","title":"故宫博物院 · 国子文脉展览中的宋拓多宝塔感应碑","kind":"网站",
+      "url":"https://www.dpm.org.cn/show/259127.html",
+      "summary":"展览说明介绍颜真卿书丹的《多宝塔感应碑》。该碑立于唐天宝十一年，展品为宋拓本，可与颜真卿的行书稿本对读。",
+      "entities":["duobao"],
+      "edges":[["duobao","书丹","yan"]]
+    },
+    {
+      "id":"dpm-xuanmi","title":"故宫博物院 · 明初拓大达法师玄秘塔碑册","kind":"帖碑",
+      "url":"https://www.dpm.org.cn/collection/impres/259370.html",
+      "summary":"故宫藏明初拓本。碑立于唐会昌元年，裴休撰文，柳公权书丹并写篆额。此帖可用来观察柳体楷书的笔力和结体。",
+      "entities":["xuanmi"],
+      "edges":[["xuanmi","书丹","liu"],["xuanmi","书体","regular"]]
+    },
+    {
+      "id":"dpm-luoshen","title":"故宫博物院 · 赵孟頫行书洛神赋卷","kind":"帖碑",
+      "url":"https://www.dpm.org.cn/collection/handwriting/228244.html",
+      "summary":"此卷为赵孟頫书写曹植《洛神赋》的传世墨迹之一，可结合字距、行距及行笔连续性学习赵氏行书。",
+      "entities":["luoshen"],
+      "edges":[["luoshen","此卷书写者","zhao"],["luoshen","书体","running"]]
+    }
+  ]
+}

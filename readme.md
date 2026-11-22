@@ -1,109 +1,85 @@
-﻿<div align="center">
+# iTip
 
-<img src="web/public/icons/icon-512.jpg" alt="iTip" width="128" height="128" />
+[中文文档](README-zh.md) · [GitHub](https://github.com/ycvenopyer/iTip) · [Issues](https://github.com/ycvenopyer/iTip/issues) · [Apache 2.0](LICENSE)
 
-> 面向书法学习者的 Web 书法助手 — 硬笔、软笔、兼修对话，支持本地私有部署。
+iTip is a Chinese calligraphy assistant for learners of brush and hard-pen calligraphy. Ask about scripts, strokes, composition, and practice. Upload a sample for feedback, generate a reference image, or revisit a saved conversation.
 
-<!-- 品牌 · Shields.io：https://shields.io/ -->
-[![iTip](https://img.shields.io/static/v1?style=for-the-badge&label=iTip&message=书法助手&color=9a2c2c&labelColor=1e1b18)](https://github.com/ycvenopyer/iTip)
-[![Deploy](https://img.shields.io/static/v1?style=for-the-badge&label=deploy&message=私有部署&color=4f6a42&labelColor=3d5236)](docs/DEV.md#生产部署)
-[![OpenAI Compatible](https://img.shields.io/static/v1?style=for-the-badge&label=LLM&message=OpenAI%20Compatible&color=524b41&labelColor=1e1b18)](docs/DEV.md#环境变量)
+## Features
 
-[![GitHub Repo](https://img.shields.io/badge/GitHub-ycvenopyer%2FiTip-1e1b18?style=flat-square&logo=github)](https://github.com/ycvenopyer/iTip)
-[![GitHub stars](https://img.shields.io/github/stars/ycvenopyer/iTip?style=social&label=Star)](https://github.com/ycvenopyer/iTip)
+- Stream answers with links to relevant calligraphy sources.
+- Discuss writing samples with a vision model and request reference images from an image model.
+- Register, sign in, and manage private conversations with search, renaming, pinning, and deletion.
+- Run locally or deploy both services to Vercel.
 
-[![Next.js](https://img.shields.io/badge/Next.js-15.2+-1e1b18?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19-1e1b18?style=flat-square&logo=react&logoColor=61DAFB)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-1e1b18?style=flat-square&logo=typescript&logoColor=3178C6)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-1e1b18?style=flat-square&logo=tailwindcss&logoColor=38B2AC)](https://tailwindcss.com/)
-[![SQLite](https://img.shields.io/badge/SQLite-本地存储-1e1b18?style=flat-square&logo=sqlite&logoColor=003B57)](https://www.sqlite.org/)
-[![Vercel AI SDK](https://img.shields.io/badge/Vercel_AI_SDK-6-1e1b18?style=flat-square&logo=vercel&logoColor=white)](https://sdk.vercel.ai/)
+The local app is available at `http://localhost:3000`. For a Vercel deployment, use the production domain assigned to the frontend project.
 
-[![PWA](https://img.shields.io/static/v1?style=flat-square&label=PWA&message=可安装&color=f2eadc&labelColor=524b41)](web/public/manifest.json)
-[![SEO](https://img.shields.io/static/v1?style=flat-square&label=SEO&message=robots%20%2B%20sitemap&color=f2eadc&labelColor=524b41)](web/app/sitemap.ts)
-[![JWT Auth](https://img.shields.io/static/v1?style=flat-square&label=Auth&message=JWT%20Cookie&color=f2eadc&labelColor=9a2c2c)](docs/ARCHITECTURE.md#认证与会话)
+## Architecture
 
-</div>
+| Layer | Implementation |
+| --- | --- |
+| Frontend | Next.js App Router, React, TypeScript, Tailwind CSS, and AI SDK UI in [`frontend/`](frontend/) |
+| Backend | Python 3.12 and Flask in [`backend/`](backend/) |
+| Agent | LangGraph with a source-backed GraphRAG workflow |
+| Database | PostgreSQL via psycopg for accounts, conversations, rate limits, and knowledge graph tables |
 
-## 目录
+The browser keeps requests on the frontend origin. Next.js proxies `/api/*` to Flask and forwards the chat event stream. Flask authenticates the user and handles database and model calls.
 
-- [目录](#目录)
-- [简介](#简介)
-- [功能特性](#功能特性)
-- [技术栈](#技术栈)
-- [前后端边界](#前后端边界)
-- [快速开始](#快速开始)
-- [文档](#文档)
-- [项目结构](#项目结构)
+### Agent workflow
 
-## 简介
+1. **Prepare the query.** Read the current user turn and retain the previous turn for retrieval fallback.
+2. **Retrieve evidence.** Match simplified and traditional Chinese names and aliases, expand one hop over source-backed graph edges, and rank the associated sources.
+3. **Generate the answer.** Pass the selected evidence to the configured model, stream the response, and append source links.
 
-iTip 是面向学书者的 **Web 书法助手**：注册登录后可进行书法主题 AI 对话，支持多会话、附图与参考图生成。基于 Next.js 全栈 + SQLite，对接 **OpenAI 兼容 API**（文档示例为智谱 GLM），可本地或内网私有部署。
+### Models and data
 
-## 功能特性
+Model settings live in [`backend/.env.example`](backend/.env.example). Set `AI_BASE_URL` and `AI_API_KEY` for an OpenAI-compatible provider. Configure `AI_MODEL` for text, `AI_VISION_MODEL` for conversations with images, and `AI_IMAGE_MODEL` for reference images. The example shows Zhipu model IDs. Use the IDs available to your provider account.
 
-| 类别 | 能力 |
-|------|------|
-| **账号** | 注册 / 登录、JWT（HttpOnly Cookie）、修改密码 |
-| **对话** | 流式输出、领域 prompt + few-shot、中文分词优化 |
-| **多会话** | 新建、搜索、重命名、置顶、删除；消息持久化 |
-| **多模态** | 附图讨论（需视觉模型） |
-| **图片生成** | OpenAI 兼容 `/v1/images/generations`（客户端展示，不入库） |
-| **体验** | 纸墨 UI、loading / error / 404、可访问性 |
-| **SEO / PWA** | robots、sitemap、Open Graph；Manifest 可安装（无离线缓存） |
-| **安全** | Middleware 安全头、鉴权 API 内存限速 |
+The [starter corpus](backend/knowledge_seed.json) contains 13 source records covering calligraphy works, inscriptions, publications, exhibition pages, and dictionaries. Each record links to its source and can connect people, works, scripts, or techniques. Add curated records with the `ingest` command. Conversation text and attachments are stored in PostgreSQL and sent to the configured model provider when they are part of a model request. [Architecture and data handling](docs/ARCHITECTURE.md)
 
-## 技术栈
+## Quickstart
 
-Next.js 15（App Router）、React 19、TypeScript、Tailwind v4、Vercel AI SDK 6、SQLite（`better-sqlite3`）、JWT（`jose`）、Zod 4。版本以 `web/package-lock.json` 为准。
-
-## 前后端边界
-
-`web/` 为 **Next.js 全栈单体**（非前后端分离仓库）：前端在浏览器运行 UI（`components/`、`public/`），后端在 Node 运行 API 与业务逻辑（`app/api/`、`lib/`）。`app/` 内页面路由与 API 路由并存，属 App Router 约定。
-
-详见 [docs/ARCHITECTURE.md#前后端边界](docs/ARCHITECTURE.md#前后端边界)。
-
-## 快速开始
-
-**要求**：Node.js 20+、npm 9+、C++ 构建环境（`better-sqlite3`；Windows 需 VS Build Tools）。
+Install Python 3.12 and Node.js 22. Use an existing PostgreSQL database or start a local one with Docker. Run the commands from the repository root unless a step changes the directory.
 
 ```bash
-git clone <repo-url> iTip
-cd iTip/web
-cp .env.example .env.local   # Windows: copy .env.example .env.local
-# 至少配置 AUTH_SECRET 与 AI_* 三项
-npm install && npm run dev
+git clone https://github.com/ycvenopyer/iTip.git
+cd iTip
+docker run -d --name itip-postgres -p 127.0.0.1:5432:5432 -e POSTGRES_USER=itip -e POSTGRES_PASSWORD=itip-local-password -e POSTGRES_DB=itip -v itip-postgres:/var/lib/postgresql/data postgres:17
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
+python3.12 -m venv .venv
+.venv/bin/python -m pip install -r backend/requirements.txt
 ```
 
-访问 [http://localhost:3000](http://localhost:3000)。未配置 LLM 时对话接口返回 503。环境变量见 [docs/DEV.md](docs/DEV.md)。
+Set `AUTH_SECRET` and the model settings in `backend/.env`. If you use an existing database, replace `DATABASE_URL` with its connection URL. In the first terminal, initialize the database, load the starter corpus, and start Flask.
 
-| 命令 | 说明 |
-|------|------|
-| `npm run dev` | 开发（Turbopack） |
-| `npm run build` | 生产构建（standalone） |
-| `npm run start` | 启动生产服务 |
-| `npm run lint` | ESLint |
-
-## 文档
-
-| 文档 | 内容 |
-|------|------|
-| [REQUIREMENTS.md](docs/REQUIREMENTS.md) | 产品范围、功能清单、限制与路线图 |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 架构、前后端边界、数据模型、API |
-| [DEV.md](docs/DEV.md) | 环境变量、开发、部署、故障排查 |
-| [BADGES.md](docs/BADGES.md) | Badge 与图标规范 |
-
-## 项目结构
-
-```
-iTip/
-├── web/              # Next.js 全栈应用
-│   ├── app/          # 页面 + app/api/ 接口
-│   ├── components/   # 客户端组件
-│   ├── lib/          # 服务端逻辑（DB、鉴权、AI）
-│   ├── public/       # 静态资源与 PWA 图标
-│   └── data/         # SQLite（运行时，已 gitignore）
-└── docs/
+```bash
+.venv/bin/python -m flask --app backend/app.py init-db
+.venv/bin/python -m flask --app backend/app.py ingest backend/knowledge_seed.json
+.venv/bin/python -m flask --app backend/app.py run --port 5000
 ```
 
-细节见 [ARCHITECTURE.md](docs/ARCHITECTURE.md)。功能或 API 变更时请同步更新 `docs/` 与本文档。
+In another terminal, start Next.js.
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). The health endpoint at `/api/health` reports the database status and imported source count. For Windows PowerShell commands and environment variable details, see the [development guide](docs/DEV.md).
+
+## Deploy to Vercel
+
+Import the repository into two Vercel projects. Set the backend root to `backend` and the frontend root to `frontend`. Connect PostgreSQL to the backend, initialize the schema and seed data, then configure the frontend to reach the deployed Flask origin. Follow the [step-by-step Vercel guide](docs/DEV.md#vercel-部署).
+
+## Contributing
+
+1. Fork the repository and create a branch for your change.
+2. Run `npm run lint` and `npm run build` in `frontend/`. For backend changes, check `/api/health` and exercise the affected route against a development PostgreSQL database.
+3. Open a [pull request](https://github.com/ycvenopyer/iTip/pulls) with the reason for the change and how you verified it. For knowledge contributions, include the original source URL and a short summary.
+
+To [report an issue](https://github.com/ycvenopyer/iTip/issues/new), include reproduction steps, expected and actual behavior, and the relevant versions or redacted logs. Remove keys, database URLs, and private conversation data from reports.
+
+## License
+
+The repository is licensed under the [Apache License 2.0](LICENSE). Linked source material and model services have their own terms.
