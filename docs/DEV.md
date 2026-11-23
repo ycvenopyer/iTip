@@ -41,6 +41,10 @@ npm.cmd run dev
 
 访问 `http://localhost:3000`。首次导入种子后，`http://localhost:3000/api/health` 应返回 `{"ok":true,"knowledgeSources":13}`。在 `frontend/` 运行 `npm run lint` 和 `npm run build` 验证前端生产构建，也可用 `npm start` 启动生产构建。
 
+检查界面时，先在未登录状态打开 `/login` 和 `/register`，再使用开发库的测试账号打开 `/chat` 和 `/settings`。用窄屏和桌面窗口验证键盘焦点、账号表单、侧栏收起、快捷提问、图片选择和设置保存。测试记录应区分真实后端与模拟数据。
+
+在对话页打开「设置 → 风格」，逐个切换风格并刷新，确认已选风格与打开的会话均保留。退出后检查登录页的版式和素材，再切回「默认」检查原版。界面外观选择「随风格」时会使用当前风格的明暗、配色、侧栏和圆角。其他选项可手动覆盖。
+
 ## Vercel 部署
 
 ### 1. 导入 Flask 项目
@@ -64,13 +68,13 @@ npm.cmd run dev
 
 ### 3. 配置并部署 Flask
 
-在后端项目的 **Settings → Environment Variables** 选择 **Production**。配置后 Deploy 或 Redeploy，记下稳定的后端生产域名，例如 `https://itip-api.vercel.app`。
+在后端项目的 **Settings → Environment Variables** 选择 **Production**。运行本地开发一节的随机值生成命令两次，分别为登录签名和前后端代理准备独立密钥。配置后 Deploy 或 Redeploy，记下稳定的后端生产域名，例如 `https://itip-api.vercel.app`。
 
 | 变量 | 生产值 |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL URL。Neon 池化连接地址通常包含 `-pooler` |
-| `AUTH_SECRET` | JWT 签名密钥，用上面的 Python 命令生成随机值 |
-| `BACKEND_PROXY_SECRET` | 前端调用 Flask 的共享密钥，另生成一份随机值 |
+| `AUTH_SECRET` | Flask 的 JWT 签名密钥。填写以 32 字节随机值生成的字符串 |
+| `BACKEND_PROXY_SECRET` | 前端调用 Flask 的共享密钥。保存生成的第二份随机值，前端需要使用同一份 |
 | `COOKIE_SECURE` | `1`，生产 Cookie 仅通过 HTTPS 发送 |
 | `AI_BASE_URL` | 云端可访问的 OpenAI 兼容 API 地址，智谱示例为 `https://open.bigmodel.cn/api/paas/v4` |
 | `AI_API_KEY` | 模型服务商的 API Key |
@@ -97,7 +101,10 @@ npm.cmd run dev
 
 - 打开前端域名的 `/api/health`，应返回 `ok: true` 和 `knowledgeSources: 13` 或更多。
 - 注册、登录并询问“神龙本和定武本有什么区别？”。检查流式输出、来源链接和刷新后恢复历史，再测试附图和出图。
-- 遇到 **401** 或 **403** 时检查登录状态、代理密钥和 Flask 的部署保护。遇到 **500** 时检查 Flask 日志、连接串和初始化步骤。模型调用失败时检查 API 地址、模型 ID、密钥和权限。
+- 健康检查通过后仍应测试注册或登录。`/api/health` 用于检查数据库，因此不会检验登录签名或前后端代理密钥。
+- 注册或登录返回 **503** 且提示「登录服务尚未配置」时，确认后端 Production 的 `AUTH_SECRET` 有有效值且已重新部署。「后端代理尚未配置」时，检查后端 Production 的 `BACKEND_PROXY_SECRET`。
+- **401** 时检查登录状态。**403** 时检查两边的代理密钥是否一致，以及 Flask 的部署保护。前端返回 **502** 且提示「无法连接 iTip 后端」时，核对 `FLASK_API_URL` 和后端生产域名。**500** 时检查 Flask 日志、连接串和初始化步骤。
+- 模型调用失败时检查 API 地址、模型 ID、密钥和权限。外观可在对话页的设置中调整，刷新后应保留在当前浏览器。
 - 修改变量后重新部署对应项目。使用 Preview 时，给 Preview 后端独立的 PostgreSQL 分支，给两边配置匹配的代理密钥，并让前端 Preview 指向相应的 Flask 域名。
 - 单次选择的附图合计上限为 2 MiB。应用的消息请求上限为 4 MB，累计图片较多而遇到 `413` 时可压缩图片或新开对话。 [Vercel 请求体限制](https://vercel.com/docs/functions/limitations#request-body-size)
 

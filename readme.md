@@ -8,8 +8,9 @@ iTip is a Chinese calligraphy assistant for learners of brush and hard-pen calli
 
 - Stream answers with links to relevant calligraphy sources.
 - Discuss writing samples with a vision model and request reference images from an image model.
-- Register, sign in, and manage private conversations with search, renaming, pinning, and deletion.
+- Register, sign in, and manage private conversations with search, renaming, pinning, and deletion. Edit starter questions before sending them.
 - Change your password and personalize the workspace theme, typography, and layout in Settings. Appearance preferences are saved in your browser.
+- Under **Settings → 风格 (Style)**, choose Classic, Handscroll, Stele, or Writing Desk. The style applies to both login and chat, with separate appearance controls. [Artwork credits](docs/BADGES.md#书法图像与署名)
 - Run locally or deploy both services to Vercel.
 
 The local app is available at `http://localhost:3000`. For a Vercel deployment, use the production domain assigned to the frontend project.
@@ -51,7 +52,13 @@ python3.12 -m venv .venv
 .venv/bin/python -m pip install -r backend/requirements.txt
 ```
 
-Set `AUTH_SECRET` and the model settings in `backend/.env`. If you use an existing database, replace `DATABASE_URL` with its connection URL. In the first terminal, initialize the database, load the starter corpus, and start Flask.
+Generate a signing key and put its output in `AUTH_SECRET` in `backend/.env`. If you use an existing database, set `DATABASE_URL` to its development connection URL. Fill in the model settings when you are ready to test chat and image generation.
+
+```bash
+.venv/bin/python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+In the first terminal, initialize the database, load the starter corpus, and start Flask.
 
 ```bash
 .venv/bin/python -m flask --app backend/app.py init-db
@@ -71,12 +78,19 @@ Open [http://localhost:3000](http://localhost:3000). The health endpoint at `/ap
 
 ## Deploy to Vercel
 
-Import the repository into two Vercel projects. Set the backend root to `backend` and the frontend root to `frontend`. Connect PostgreSQL to the backend, initialize the schema and seed data, then configure the frontend to reach the deployed Flask origin. Follow the [step-by-step Vercel guide](docs/DEV.md#vercel-部署).
+Import the repository into two Vercel projects with root directories `backend` and `frontend`. Connect and initialize PostgreSQL for the backend. Generate separate values for the signing key and proxy secret, then put the same production proxy secret in both projects. Configure the frontend to reach the Flask production origin. [Vercel setup and troubleshooting](docs/DEV.md#vercel-部署)
+
+## Documentation
+
+- [Development and deployment](docs/DEV.md)
+- [Architecture and data handling](docs/ARCHITECTURE.md)
+- [Features and limitations](docs/REQUIREMENTS.md)
+- [Brand assets and icons](docs/BADGES.md)
 
 ## Contributing
 
 1. Fork the repository and create a branch for your change.
-2. Run `npm run lint` and `npm run build` in `frontend/`. For backend changes, check `/api/health` and exercise the affected route against a development PostgreSQL database.
+2. Run `npm run lint` and `npm run build` in `frontend/`. For interface changes, check desktop and mobile layouts as a guest and a signed-in user. For backend changes, check `/api/health` and exercise the affected route against a development PostgreSQL database.
 3. Open a [pull request](https://github.com/ycvenopyer/iTip/pulls) with the reason for the change and how you verified it. For knowledge contributions, include the original source URL and a short summary.
 
 To [report an issue](https://github.com/ycvenopyer/iTip/issues/new), include reproduction steps, expected and actual behavior, and the relevant versions or redacted logs. Remove keys, database URLs, and private conversation data from reports.

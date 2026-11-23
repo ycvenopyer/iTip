@@ -8,14 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { MessageAvatar } from "@/components/SealAvatar";
-import { WorkspaceIcon } from "@/components/WorkspaceIcon";
-
-const quickPrompts = [
-  { icon: "book", title: "选帖入门", detail: "零基础怎样选第一本毛笔楷书字帖？", text: "零基础，想练毛笔楷书，每天大概半小时，该从哪本帖入手？" },
-  { icon: "pen", title: "执笔与用笔", detail: "找出硬笔执笔姿势的常见错误", text: "硬笔执笔姿势有哪些常见错误？怎么纠正？" },
-  { icon: "grid", title: "结字分析", detail: "把松散的字练得更稳", text: "我的字结构总是散，怎么练习结字？请给具体的日课安排。" },
-  { icon: "practice", title: "硬软笔兼修", detail: "了解两种行书的练习侧重点", text: "硬笔行书和毛笔行书，练习时要注意什么互相照应的点？" },
-] as const;
+import { ChatWelcome } from "@/components/ChatWelcome";
 
 type Vote = "up" | "down";
 
@@ -541,28 +534,12 @@ export function CalligraphyChat({
       )}
       <div className="ink-scroll relative min-h-0 flex-1 overflow-y-auto">
         {messages.length === 0 && genImages.length === 0 ? (
-          <div className="chat-welcome ink-fade-in">
-            <span className="brand-seal" aria-hidden="true">书</span>
-            <h2>今天想练哪一笔？</h2>
-            <p className="mt-2 max-w-md text-sm leading-6 text-ink-500">问选帖、用笔和结字，或上传习字照片，一起看看从哪里改起。</p>
-            <div className="chat-prompts">
-              {quickPrompts.map((prompt) => (
-                <button key={prompt.title} type="button" className="chat-prompt" disabled={busy || genLoading} onClick={() => {
-                  if (inputRef.current) {
-                    inputRef.current.value = prompt.text;
-                    inputRef.current.focus();
-                  }
-                }}>
-                  <span className="chat-prompt-icon"><WorkspaceIcon name={prompt.icon} className="size-4" /></span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-ink-900">{prompt.title}</span>
-                    <span className="mt-0.5 block text-xs leading-5 text-ink-500">{prompt.detail}</span>
-                  </span>
-                  <WorkspaceIcon name="diagonal" className="size-3.5 shrink-0 text-ink-400" />
-                </button>
-              ))}
-            </div>
-          </div>
+          <ChatWelcome disabled={busy || genLoading} onPrompt={(text) => {
+            if (inputRef.current) {
+              inputRef.current.value = text;
+              inputRef.current.focus();
+            }
+          }} />
         ) : (
           <div className="chat-column space-y-7 px-4 py-7 md:px-6">
             {/* 生成的图片卡片 */}

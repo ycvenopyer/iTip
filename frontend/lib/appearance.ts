@@ -1,13 +1,15 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { styleIds } from "@/lib/visual-styles";
 
 const appearanceOptions = {
-  mode: ["light", "dark", "system"],
-  accent: ["cinnabar", "bamboo", "indigo"],
+  style: styleIds,
+  mode: ["style", "light", "dark", "system"],
+  accent: ["style", "cinnabar", "bamboo", "indigo"],
   font: ["sans", "serif"],
-  radius: ["crisp", "soft", "round"],
-  sidebar: ["left", "right"],
+  radius: ["style", "crisp", "soft", "round"],
+  sidebar: ["style", "left", "right"],
   width: ["standard", "wide"],
 } as const;
 
@@ -18,11 +20,12 @@ export type Appearance = {
 export const textSizeRange = { min: 14, max: 22 };
 
 const defaults: Appearance = {
-  mode: "light",
-  accent: "cinnabar",
+  style: "classic",
+  mode: "style",
+  accent: "style",
   font: "sans",
-  radius: "soft",
-  sidebar: "left",
+  radius: "style",
+  sidebar: "style",
   width: "standard",
   textSize: 16,
 };
@@ -44,12 +47,15 @@ function readAppearance(): Appearance {
     if (raw === cachedRaw) return cached;
     const value: Partial<Appearance> | null = raw ? JSON.parse(raw) : null;
     const textSize = value?.textSize;
+    const fromPreviousVersion = value?.style === undefined;
+    // Carry forward custom choices while letting the old defaults follow a style.
     cached = {
-      mode: readChoice(value?.mode, appearanceOptions.mode, defaults.mode),
-      accent: readChoice(value?.accent, appearanceOptions.accent, defaults.accent),
+      style: readChoice(value?.style, appearanceOptions.style, defaults.style),
+      mode: fromPreviousVersion && value?.mode === "light" ? "style" : readChoice(value?.mode, appearanceOptions.mode, defaults.mode),
+      accent: fromPreviousVersion && value?.accent === "cinnabar" ? "style" : readChoice(value?.accent, appearanceOptions.accent, defaults.accent),
       font: readChoice(value?.font, appearanceOptions.font, defaults.font),
-      radius: readChoice(value?.radius, appearanceOptions.radius, defaults.radius),
-      sidebar: readChoice(value?.sidebar, appearanceOptions.sidebar, defaults.sidebar),
+      radius: fromPreviousVersion && value?.radius === "soft" ? "style" : readChoice(value?.radius, appearanceOptions.radius, defaults.radius),
+      sidebar: fromPreviousVersion && value?.sidebar === "left" ? "style" : readChoice(value?.sidebar, appearanceOptions.sidebar, defaults.sidebar),
       width: readChoice(value?.width, appearanceOptions.width, defaults.width),
       textSize: typeof textSize === "number" && Number.isFinite(textSize)
         ? Math.round(Math.max(textSizeRange.min, Math.min(textSizeRange.max, textSize)))
@@ -96,5 +102,5 @@ export function updateAppearance(changes: Partial<Appearance>) {
 }
 
 export function resetAppearance() {
-  applyAppearance(defaults);
+  applyAppearance({ ...defaults, style: readAppearance().style });
 }

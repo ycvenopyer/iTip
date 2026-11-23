@@ -17,6 +17,16 @@ flowchart LR
 
 `frontend/` 使用 Next.js 15、React 19、Tailwind 和 AI SDK `useChat`。服务端页面从 Flask 获取登录状态和会话数据。浏览器发出同域 `/api/*` 请求，Next.js 转发 Cookie、状态码和流式响应。`backend/` 中的 Flask 负责账号、PostgreSQL 访问和模型调用。
 
+## 页面与偏好
+
+| 路由 | 用途 |
+|---|---|
+| `/`、`/login`、`/register` | 首页、邮件登录与注册 |
+| `/chat?c=<id>` | 有权限的对话、历史、快捷提问、图片上传与参考图生成 |
+| `/settings` | 页面风格、界面外观和账号安全。应用内也可以从对话页打开设置 |
+
+页面风格与外观偏好由 `frontend/lib/appearance.ts` 统一保存在当前浏览器的 `localStorage`。`frontend/lib/visual-styles.ts` 定义四套风格的默认明暗、配色、侧栏位置与图像。登录和对话读取同一份偏好，手动指定的外观设置优先于风格默认值。修改密码沿用同域 API 和 Flask 会话校验。
+
 LangGraph 的三个节点依次准备检索问题、检索知识图谱并生成流式回答。检索用简繁别名定位实体，在来源支撑的关系里扩展一跳，再按直接匹配和相关实体对证据排序。回答末尾附上检索到的来源链接。这一版本以关系图和文本匹配做本地图谱检索，资料规模小，可通过结构化导入扩充。
 
 ## 数据模型
@@ -29,7 +39,7 @@ LangGraph 的三个节点依次准备检索问题、检索知识图谱并生成�
 
 ## 认证与会话
 
-用户登录后收到有效期七天的签名 JWT，放在 HttpOnly、SameSite=Lax Cookie 中，Vercel 生产环境启用 Secure。Flask 会验证签名、有效期和账号是否仍存在。查询、更新和删除会话均校验所属用户。前端服务端与 Flask 之间使用共享密钥。用户可通过页面删除会话。
+登录后，Flask 使用 `AUTH_SECRET` 签发有效期七天的 JWT，放在 HttpOnly、SameSite=Lax Cookie 中。Vercel 生产环境启用 Secure。Flask 会验证签名、有效期和账号是否仍存在。查询、更新和删除会话均校验所属用户。Next.js 服务端转发受保护的请求时附上共享的 `BACKEND_PROXY_SECRET`，Flask 对其进行校验。注册、登录、改密和对话等操作受数据库限速保护。
 
 对话消息、附图及检索所得资料摘要会进入配置的模型服务，出图服务收到出图提示词。对话自动保存到 PostgreSQL，附图跟随消息存储。消息 JSON 未做应用层加密。服务商的留存政策及生成图片 URL 的有效期由服务商决定。数据库连接串、模型密钥和代理密钥不提交至 Git。
 

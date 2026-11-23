@@ -23,7 +23,7 @@
   --accent-border: color-mix(in srgb, var(--accent) 25%, var(--paper-surface));
   --ui-font: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   --reading-font: var(--ui-font);
-  --workspace-radius: 14px;
+  --workspace-radius: var(--style-radius, 14px);
   --chat-width: 760px;
   --rail-width: 262px;
   background: var(--paper-ground);
@@ -35,6 +35,7 @@
 .workspace[data-mode="system"] { color-scheme: light dark; }
 .workspace[data-font="serif"] { --reading-font: var(--font-body); }
 .workspace[data-radius="crisp"] { --workspace-radius: 5px; }
+.workspace[data-radius="soft"] { --workspace-radius: 14px; }
 .workspace[data-radius="round"] { --workspace-radius: 23px; }
 .workspace[data-width="wide"] { --chat-width: 1016px; }
 .workspace[data-accent="bamboo"] {
@@ -189,6 +190,7 @@
   text-align: center;
 }
 .chat-welcome .brand-seal { width: 55px; height: 55px; border-radius: 10px; font-size: 33px; }
+.chat-welcome .style-welcome-intro { max-width: 28rem; }
 .chat-welcome h2 {
   margin-top: 17px;
   font-family: var(--font-brush);

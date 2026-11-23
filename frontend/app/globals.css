@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./workspace.css";
+@import "./visual-styles.css";
 
 /* 系统字体栈：避免 build/dev 时依赖 Google Fonts（内网或防火墙下会失败） */
 :root {

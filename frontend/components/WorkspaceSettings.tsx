@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
 import { SettingsForm } from "@/components/SettingsForm";
 import { WorkspaceIcon } from "@/components/WorkspaceIcon";
 import { resetAppearance, textSizeRange, updateAppearance, useAppearance } from "@/lib/appearance";
+import { styleIds, styleProfiles } from "@/lib/visual-styles";
 
 function Choices<Value extends string>({ title, value, options, onChange }: {
   title: string;
@@ -39,9 +41,11 @@ function AppearanceSettings() {
       <p className="text-xs leading-5 text-ink-500">调整会立即生效，并保存在当前浏览器。</p>
       <div className="grid gap-x-5 gap-y-3 sm:grid-cols-2">
         <Choices title="显示模式" value={value.mode} options={[
+          { value: "style", label: "随风格" },
           { value: "light", label: "浅色" }, { value: "dark", label: "深色" }, { value: "system", label: "跟随系统" },
         ]} onChange={(mode) => updateAppearance({ mode })} />
         <Choices title="主题配色" value={value.accent} options={[
+          { value: "style", label: "随风格" },
           { value: "cinnabar", label: "朱砂", swatch: "#a0473d" }, { value: "bamboo", label: "竹青", swatch: "#527050" },
           { value: "indigo", label: "靛蓝", swatch: "#506b94" },
         ]} onChange={(accent) => updateAppearance({ accent })} />
@@ -49,9 +53,11 @@ function AppearanceSettings() {
           { value: "sans", label: "黑体" }, { value: "serif", label: "宋体" },
         ]} onChange={(font) => updateAppearance({ font })} />
         <Choices title="界面圆角" value={value.radius} options={[
+          { value: "style", label: "随风格" },
           { value: "crisp", label: "方正" }, { value: "soft", label: "柔和" }, { value: "round", label: "圆润" },
         ]} onChange={(radius) => updateAppearance({ radius })} />
         <Choices title="侧栏位置" value={value.sidebar} options={[
+          { value: "style", label: "随风格" },
           { value: "left", label: "左侧" }, { value: "right", label: "右侧" },
         ]} onChange={(sidebar) => updateAppearance({ sidebar })} />
         <Choices title="对话宽度" value={value.width} options={[
@@ -74,8 +80,44 @@ function AppearanceSettings() {
   );
 }
 
+function StyleSettings() {
+  const { style } = useAppearance();
+  const name = useId();
+  return (
+    <fieldset className="style-picker">
+      <legend className="text-sm font-semibold">页面风格</legend>
+      <p className="my-2 text-xs leading-5 text-ink-500">登录页和对话页同步切换。选择会保存在当前浏览器。</p>
+      <div className="style-picker-grid">
+        {styleIds.map((id) => {
+          const { label, description, artwork } = styleProfiles[id];
+          return (
+            <label key={id} className="style-option">
+              <input className="sr-only" type="radio" name={name} checked={style === id} onChange={() => updateAppearance({ style: id })} aria-label={label} />
+              <span className="style-option-content">
+                <span className="style-option-preview" data-preview-style={id} aria-hidden="true">
+                  {artwork
+                    ? <Image src={artwork.src} alt="" width={artwork.width} height={artwork.height} sizes="220px" />
+                    : <span className="brand-seal">书</span>}
+                </span>
+                <span className="style-option-label">
+                  <span className="min-w-0">
+                    <strong className="block text-sm">{label}</strong>
+                    <small className="block text-xs text-ink-500">{description}</small>
+                  </span>
+                  {style === id && <span className="style-option-check" aria-hidden="true">✓</span>}
+                </span>
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
 const sections = [
   { id: "appearance", label: "界面外观", icon: "appearance" },
+  { id: "style", label: "风格", icon: "book" },
   { id: "account", label: "账号安全", icon: "account" },
 ] as const;
 
@@ -102,7 +144,9 @@ function SettingsPanel({ email, titleId, onClose }: { email: string; titleId: st
           ))}
         </nav>
         <div className="settings-content ink-scroll">
-          {section === "appearance" ? <AppearanceSettings /> : (
+          {section === "appearance" && <AppearanceSettings />}
+          {section === "style" && <StyleSettings />}
+          {section === "account" && (
             <section className="max-w-sm space-y-5" aria-labelledby={`${titleId}-account`}>
               <div>
                 <h2 id={`${titleId}-account`} className="text-base font-semibold">修改密码</h2>

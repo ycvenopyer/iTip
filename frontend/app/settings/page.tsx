@@ -7,7 +7,7 @@ import { getSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "设置",
-  description: "管理 iTip 的界面外观和账号安全设置。",
+  description: "切换 iTip 的页面风格，管理界面外观和账号安全。",
 };
 
 export default async function SettingsPage() {

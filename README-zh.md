@@ -1,6 +1,6 @@
 # iTip
 
-[English](README.md) · [GitHub 仓库](https://github.com/ycvenopyer/iTip) · [问题反馈](https://github.com/ycvenopyer/iTip/issues) · [Apache 2.0](LICENSE)
+[English](readme.md) · [GitHub 仓库](https://github.com/ycvenopyer/iTip) · [问题反馈](https://github.com/ycvenopyer/iTip/issues) · [Apache 2.0](LICENSE)
 
 iTip 是面向毛笔和硬笔学习者的中文书法助手。你可以咨询书体、用笔、章法和临习方法，上传习作讨论，生成参考图，并查看历史会话。
 
@@ -8,8 +8,9 @@ iTip 是面向毛笔和硬笔学习者的中文书法助手。你可以咨询书
 
 - 流式回答书法问题，并附上检索到的资料链接。
 - 支持看图讨论和生成书法参考图，分别使用配置的视觉模型和出图模型。
-- 支持注册、登录和管理个人会话，包括搜索、重命名、置顶和删除。
+- 支持注册、登录和管理个人会话，包括搜索、重命名、置顶和删除。快捷提问可编辑后再发送。
 - 在设置中修改密码，并调整工作台的主题、阅读排版和布局。外观偏好保存在当前浏览器。
+- 在「设置 → 风格」选择默认、展卷、碑拓或日课。登录与对话使用同一套风格，外观设置可独立调整。 [素材来源](docs/BADGES.md#书法图像与署名)
 - 支持本地运行，也可将前后端部署到 Vercel。
 
 本地访问地址为 `http://localhost:3000`。部署后通过 Vercel 前端项目的生产域名访问。
@@ -51,7 +52,13 @@ python -m venv .venv
 .venv/Scripts/python -m pip install -r backend/requirements.txt
 ```
 
-编辑 `backend/.env`，设置 `AUTH_SECRET` 和模型配置。如果使用已有数据库，填入对应的 `DATABASE_URL`。在第一个终端初始化表、导入资料并启动 Flask。
+生成登录签名密钥，将输出填入 `backend/.env` 的 `AUTH_SECRET`。使用已有数据库时，把开发库连接串填入 `DATABASE_URL`。需要测试对话和出图时，再填写模型配置。
+
+```powershell
+.venv/Scripts/python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+在第一个终端初始化表、导入资料并启动 Flask。
 
 ```powershell
 .venv/Scripts/python -m flask --app backend/app.py init-db
@@ -71,12 +78,19 @@ npm.cmd run dev
 
 ## 部署到 Vercel
 
-从同一个 GitHub 仓库创建两个 Vercel 项目。后端根目录选 `backend`，前端根目录选 `frontend`。在后端连接并初始化 PostgreSQL，再让前端指向部署后的 Flask 项目。 [Vercel 详细步骤与环境变量](docs/DEV.md#vercel-部署)
+从同一个 GitHub 仓库创建两个 Vercel 项目，根目录分别选 `backend` 和 `frontend`。在后端连接并初始化 PostgreSQL。分别生成登录签名密钥和代理密钥，把同一份生产代理密钥填入前后端两个项目，再让前端指向 Flask 生产地址。 [Vercel 部署与排查](docs/DEV.md#vercel-部署)
+
+## 文档
+
+- [开发与部署](docs/DEV.md)
+- [架构与数据处理](docs/ARCHITECTURE.md)
+- [功能与限制](docs/REQUIREMENTS.md)
+- [品牌素材与图标](docs/BADGES.md)
 
 ## 贡献代码与反馈问题
 
 1. Fork 仓库并新建分支。
-2. 在 `frontend/` 运行 `npm run lint` 和 `npm run build`。如果修改了后端，在开发用 PostgreSQL 上检查 `/api/health` 并验证相关接口。
+2. 在 `frontend/` 运行 `npm run lint` 和 `npm run build`。界面改动应在桌面端和移动端检查登录前后的布局。后端改动应在开发库上检查 `/api/health` 并验证相关接口。
 3. 创建 [Pull Request](https://github.com/ycvenopyer/iTip/pulls)，说明改动原因和验证方式。贡献知识资料时附上原始来源链接与摘要。
 
 提交 [Issue](https://github.com/ycvenopyer/iTip/issues/new) 时，请提供复现步骤、预期结果、实际结果和相关版本或脱敏日志。请从报告中移除密钥、数据库连接串和私人会话内容。

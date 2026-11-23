@@ -1,0 +1,275 @@
+.workspace[data-style="handscroll"] {
+  --paper-surface: light-dark(#fdfaf2, #26211c);
+  --paper-ground: light-dark(#f6f1e5, #1d1916);
+  --rail: light-dark(#eee6d6, #211c18);
+  --ink-200: light-dark(#d4c4a9, #524435);
+  --style-radius: 5px;
+}
+
+.workspace[data-style="stele"] {
+  --paper-surface: light-dark(#fcf9f1, #20211c);
+  --paper-ground: light-dark(#f4efe5, #171814);
+  --rail: light-dark(#ebe5d8, #1b1c17);
+  --ink-50: light-dark(#f6f2ea, #262720);
+  --ink-100: light-dark(#ede6d9, #303127);
+  --ink-200: light-dark(#d5cabc, #48483b);
+  --ink-400: light-dark(#73685c, #a09985);
+  --ink-500: light-dark(#62594c, #bcb29b);
+  --style-radius: 4px;
+}
+
+.workspace[data-style="writing-desk"] {
+  --paper-surface: light-dark(#fcfdf5, #202823);
+  --paper-ground: light-dark(#f0f4ec, #171f1a);
+  --rail: light-dark(#e7ede3, #1b241e);
+  --ink-50: light-dark(#eff4ea, #253129);
+  --ink-100: light-dark(#e1eadf, #303d34);
+  --ink-200: light-dark(#cbd8cc, #43584a);
+  --ink-500: light-dark(#526359, #adc1b4);
+  --style-radius: 6px;
+}
+
+.workspace[data-accent="bronze"] {
+  --accent: light-dark(#735021, #edc78d);
+  --accent-hover: light-dark(#5b3b17, #f4d8ad);
+  --accent-ink: light-dark(#fffdf9, #251b10);
+}
+
+.workspace[data-accent="jade"] {
+  --accent: light-dark(#255649, #9dc9b2);
+  --accent-hover: light-dark(#194135, #bcdfca);
+  --accent-ink: light-dark(#fffdf9, #142b22);
+}
+
+.style-picker { min-width: 0; }
+.style-picker-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.style-option { min-width: 0; cursor: pointer; }
+.style-option-content {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--ink-200);
+  border-radius: 9px;
+  background: var(--paper-surface);
+  color: var(--ink-900);
+}
+.style-option:hover .style-option-content { border-color: var(--accent); }
+.style-option input:checked + .style-option-content {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.style-option input:focus-visible + .style-option-content {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.style-option-preview {
+  display: grid;
+  height: clamp(56px, 13vw, 98px);
+  place-items: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--ink-200);
+  background: #f2ebe0;
+}
+.style-option-preview img { width: 100%; height: 100%; min-height: 0; object-fit: cover; }
+.style-option-preview[data-preview-style="stele"] img { object-position: 50% 35%; }
+.style-option-preview[data-preview-style="writing-desk"] img { object-position: 57% 74%; }
+.style-option-label { display: flex; align-items: flex-start; justify-content: space-between; gap: 5px; padding: 8px 9px; }
+.style-option-check { flex: none; color: var(--accent-hover); font-weight: 700; }
+
+.style-artwork { min-width: 0; margin: 0; }
+.style-artwork-image { overflow: hidden; border: 1px solid var(--ink-200); border-radius: var(--workspace-radius); }
+.style-artwork-image img { display: block; width: 100%; height: auto; object-fit: cover; }
+.style-artwork figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  column-gap: 14px;
+  padding-block: 8px 0;
+  color: var(--ink-600);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.style-artwork figcaption a { color: var(--accent-hover); text-decoration: underline; text-underline-offset: 3px; }
+
+.styled-login { min-height: 100dvh; }
+.styled-login-header {
+  display: flex;
+  width: min(1280px, calc(100% - 40px));
+  min-height: 71px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-inline: auto;
+  border-bottom: 1px solid var(--ink-200);
+}
+.styled-login-wordmark { color: var(--ink-500); font-size: 13px; }
+.styled-login-back { padding-block: 12px; color: var(--accent-hover); font-size: 14px; }
+.styled-login-back:hover { text-decoration: underline; text-underline-offset: 4px; }
+.styled-login-layout {
+  display: grid;
+  width: min(1200px, calc(100% - 48px));
+  min-height: calc(100dvh - 71px);
+  grid-template-areas: "form image";
+  grid-template-columns: minmax(280px, .78fr) minmax(0, 1.3fr);
+  align-items: center;
+  column-gap: clamp(35px, 7vw, 105px);
+  margin-inline: auto;
+  padding-block: 35px 50px;
+}
+.styled-login-form { grid-area: form; max-width: 440px; width: 100%; }
+.styled-login-form h1 {
+  margin: 0;
+  font-size: clamp(46px, 5.7vw, 82px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: .02em;
+}
+.styled-login-intro { margin: 11px 0 27px; color: var(--ink-600); font-size: 15px; }
+.styled-login-form input {
+  min-height: 46px;
+  border-color: var(--ink-200);
+  border-radius: min(var(--workspace-radius), 10px);
+  background: var(--paper-surface);
+  font-size: 16px;
+}
+.styled-login-form .login-submit {
+  min-height: 46px;
+  border-radius: min(var(--workspace-radius), 10px);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.styled-login-form .login-submit:hover:not(:disabled) { background: var(--accent-hover); }
+.styled-login-form a { color: var(--accent-hover); }
+.styled-login-feature { position: relative; grid-area: image; min-width: 0; }
+.styled-login[data-style="handscroll"] .styled-login-layout {
+  grid-template-areas: "image form";
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, .82fr);
+  column-gap: clamp(36px, 6vw, 90px);
+}
+.styled-login[data-style="handscroll"] .styled-login-form {
+  padding-left: clamp(18px, 4vw, 48px);
+  border-left: 1px solid var(--ink-200);
+}
+.scroll-inscription { margin-bottom: 13px; font-size: clamp(31px, 3.8vw, 57px); line-height: 1.2; }
+.styled-login[data-style="handscroll"] .style-artwork-image {
+  padding: 6px 8px;
+  border: 1px solid #b09669;
+  background: #c4ab81;
+}
+.styled-login[data-style="stele"] .styled-login-feature { padding-right: 44px; }
+.stele-inscription {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 9px 5px;
+  border-top: 1px solid var(--ink-200);
+  color: var(--accent);
+  font-size: 23px;
+  letter-spacing: .12em;
+  writing-mode: vertical-rl;
+}
+.styled-login[data-style="stele"] .style-artwork-image img {
+  height: clamp(400px, calc(100dvh - 178px), 650px);
+  object-position: center 36%;
+}
+.styled-login[data-style="writing-desk"] .style-artwork-image { border-start-start-radius: 34px; }
+.styled-login[data-style="writing-desk"] .style-artwork-image img {
+  height: clamp(290px, 41vw, 520px);
+  object-position: 56% 69%;
+}
+
+.style-welcome {
+  display: grid;
+  width: min(calc(100% - 48px), max(960px, var(--chat-width)));
+  min-height: 100%;
+  grid-template-columns: minmax(0, 1.16fr) minmax(230px, .84fr);
+  grid-template-areas: "intro artwork" "prompts artwork";
+  align-content: center;
+  align-items: center;
+  gap: 16px 24px;
+  margin-inline: auto;
+  padding-block: 23px;
+}
+.style-welcome-intro { grid-area: intro; }
+.style-welcome h2 { font: 600 clamp(31px, 4vw, 55px)/1.22 var(--font-brush); }
+.style-welcome .chat-prompts { grid-area: prompts; gap: 0 13px; margin: 0; }
+.style-welcome .chat-prompt {
+  min-height: 56px;
+  padding: 8px 4px;
+  border: 0;
+  border-block-start: 1px solid var(--ink-200);
+  border-radius: 0;
+  background: transparent;
+}
+.style-welcome .chat-prompt:hover { background: var(--accent-soft); }
+.style-welcome .chat-prompt-icon { width: 28px; height: 28px; }
+.style-welcome-feature { grid-area: artwork; min-width: 0; }
+.workspace[data-style="handscroll"] .style-welcome {
+  grid-template-areas: "artwork intro" "prompts prompts";
+  grid-template-columns: minmax(0, 1.3fr) minmax(210px, .7fr);
+}
+.workspace[data-style="handscroll"] .style-welcome .chat-prompts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.workspace[data-style="stele"] .style-welcome .style-artwork-image img {
+  height: clamp(180px, 30vh, 320px);
+  object-position: 50% 40%;
+}
+.workspace[data-style="writing-desk"] .style-welcome .chat-prompts { grid-template-columns: 1fr; }
+.workspace[data-style="writing-desk"] .style-welcome-feature {
+  padding: 14px;
+  border: 1px solid var(--ink-200);
+  border-radius: var(--workspace-radius);
+  background: var(--ink-50);
+}
+.workspace[data-style="writing-desk"] .style-welcome .style-artwork-image img {
+  max-height: 125px;
+  object-position: 56% 74%;
+}
+.practice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 8px;
+  border: 1px solid var(--accent-border);
+  background: var(--paper-surface);
+}
+.practice-grid span {
+  display: grid;
+  min-height: 54px;
+  place-items: center;
+  background:
+    linear-gradient(90deg, transparent calc(50% - .5px), var(--accent-border) 50%, transparent calc(50% + .5px)),
+    linear-gradient(transparent calc(50% - .5px), var(--accent-border) 50%, transparent calc(50% + .5px));
+  color: var(--accent-hover);
+  font: 34px var(--font-brush);
+}
+.practice-grid span + span { border-inline-start: 1px solid var(--accent-border); }
+.practice-grid span:nth-child(2) { opacity: .62; }
+
+@media (max-width: 760px) {
+  .styled-login-header { min-height: 58px; }
+  .styled-login-layout, .styled-login[data-style="handscroll"] .styled-login-layout {
+    width: min(480px, calc(100% - 36px));
+    min-height: 0;
+    grid-template-areas: "form" "image";
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 23px;
+    padding-block: 25px;
+  }
+  .styled-login[data-style="handscroll"] .styled-login-form { padding: 0; border: 0; }
+  .styled-login-intro { margin-bottom: 18px; }
+  .scroll-inscription { margin-bottom: 6px; font-size: 27px; }
+  .styled-login[data-style="stele"] .styled-login-feature { padding-right: 32px; }
+  .stele-inscription { padding-inline: 2px; font-size: 18px; }
+  .styled-login[data-style="stele"] .style-artwork-image img, .styled-login[data-style="writing-desk"] .style-artwork-image img { height: 170px; }
+  .style-welcome, .workspace[data-style="handscroll"] .style-welcome {
+    width: calc(100% - 30px);
+    min-height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "intro" "prompts" "artwork";
+    gap: 12px;
+    padding-block: 16px 19px;
+  }
+  .style-welcome .chat-prompts, .workspace[data-style="handscroll"] .style-welcome .chat-prompts { grid-template-columns: minmax(0, 1fr); }
+  .style-welcome .chat-prompt { min-height: 47px; }
+  .style-welcome .style-artwork-image img, .workspace[data-style="stele"] .style-welcome .style-artwork-image img { max-height: 138px; }
+}

@@ -74,7 +74,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-xl bg-ink-900 py-2.5 text-sm font-medium text-paper-50 disabled:opacity-60"
+        className="login-submit w-full rounded-xl bg-ink-900 py-2.5 text-sm font-medium text-paper-50 disabled:opacity-60"
       >
         {loading ? "…" : "登录"}
       </button>

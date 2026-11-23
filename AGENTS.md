@@ -4,7 +4,7 @@
 
 - `frontend/` contains the Next.js pages, React components, and the same-origin API proxy.
 - `backend/` contains Flask routes, the LangGraph workflow, PostgreSQL schema, and knowledge import.
-- `docs/` contains the development and deployment guide, architecture, requirements, and asset notes. Keep `README.md` and `README-zh.md` aligned on setup and features.
+- `docs/` contains the development and deployment guide, architecture, requirements, and asset notes. Keep `readme.md` and `README-zh.md` aligned on setup and features.
 
 ## Development
 
@@ -17,4 +17,5 @@
 - Keep browser API calls relative to the frontend origin. Preserve session and conversation ownership checks in Flask and the AI SDK UI stream format for chat.
 - Use parameterized PostgreSQL queries. Keep source identifiers, aliases, relationships, and HTTPS citations in sync when editing the starter corpus.
 - Run `npm run lint` and `npm run build` from `frontend/` for frontend changes. Exercise changed Flask routes against PostgreSQL and check `/api/health`. For retrieval changes, verify a known query returns relevant sources.
+- For login and chat UI changes, verify desktop and mobile layouts. Check keyboard access, the authenticated route, and same-origin requests using development or synthetic data.
 - Update [docs/DEV.md](docs/DEV.md) and the corresponding `.env.example` when changing deployment settings or environment variables.
