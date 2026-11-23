@@ -87,6 +87,8 @@ Open [http://localhost:3000](http://localhost:3000). The health endpoint at `/ap
 
 Import the repository into two Vercel projects with root directories `backend` and `frontend`. Connect and initialize PostgreSQL for the backend. Generate separate values for the signing key and proxy secret, then put the same production proxy secret in both projects. Configure the frontend to reach the Flask production origin. [Vercel setup and troubleshooting](docs/DEV.md#vercel-部署)
 
+Before deploying a release with schema changes, run `init-db` against the PostgreSQL database used by that environment.
+
 ## Documentation
 
 - [Development and deployment](docs/DEV.md)

@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 from email_validator import EmailNotValidError, validate_email
 from flask import Flask, Response, abort, g, request, stream_with_context
 from openai import APIConnectionError, APITimeoutError, AuthenticationError, PermissionDeniedError, RateLimitError
-from psycopg.errors import UniqueViolation
+from psycopg.errors import UndefinedColumn, UndefinedTable, UniqueViolation
 from werkzeug.exceptions import HTTPException
 
 from agent import ChatTiming, EmptyModelReply, elapsed_ms, get_model, graph, model_settings
@@ -72,6 +72,17 @@ def http_error(error):
 @app.errorhandler(500)
 def internal_error(_error):
     return {"error": "服务暂时不可用"}, 500
+
+
+@app.errorhandler(UndefinedColumn)
+@app.errorhandler(UndefinedTable)
+def database_schema_error(error):
+    app.logger.error(
+        "Database schema mismatch on %s. Verify DATABASE_URL and run Flask init-db against that database.",
+        request.path,
+        exc_info=error,
+    )
+    return {"error": "数据库尚未就绪，请稍后重试"}, 503
 
 
 def auth_secret():

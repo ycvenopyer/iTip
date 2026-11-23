@@ -70,7 +70,18 @@ npm.cmd run dev
 .venv/Scripts/python -m flask --app backend/app.py ingest backend/knowledge_seed.json
 ```
 
-`init-db` 创建缺少的表和索引，并迁移已有账号及对话表。已有部署需要在发布新版 Flask 前运行一次 `init-db`，启用账号名登录与项目归档。首次建库或更新资料时运行 `ingest`，它按来源 ID 更新资料，可重复执行。
+每次发布包含数据库结构变更的 Flask 版本前，对目标环境运行 `init-db`。它在一个事务中创建缺少的表和索引，并迁移已有账号及对话表，可重复执行。`ingest` 用于首次建库或更新资料，按来源 ID 更新资料。
+
+#### 在 Vercel Query 执行迁移
+
+Vercel 的数据库 Query 每次接收一条 SQL。如果直接粘贴 [schema.sql](../backend/schema.sql) 后收到 `cannot insert multiple commands into a prepared statement`，在仓库根目录运行以下 PowerShell 命令，将整个迁移包装成一个 PostgreSQL `DO` 语句并复制到剪贴板。
+
+```powershell
+$itipSchema = Get-Content -Raw -Encoding UTF8 backend/schema.sql
+(@('DO $itip_migration$', 'BEGIN', $itipSchema, 'END;', '$itip_migration$;') -join "`n") | Set-Clipboard
+```
+
+确认 Query 连接的是后端实际使用的数据库和分支，再粘贴并整段运行。迁移全部成功后才会提交。
 
 ### 3. 配置并部署 Flask
 
@@ -108,6 +119,7 @@ npm.cmd run dev
 - 打开前端域名的 `/api/health`，应返回 `ok: true` 和 `knowledgeSources: 13` 或更多。
 - 注册、登录并询问“神龙本和定武本有什么区别？”。检查流式输出、来源链接和刷新后恢复历史，再测试附图和出图。
 - 健康检查通过后仍应测试注册或登录。`/api/health` 用于检查数据库，因此不会检验登录签名或前后端代理密钥。
+- 如果 Flask 日志出现 `column "username" does not exist`、`column "project_id" does not exist` 或 `Database schema mismatch`，先确认部署实际使用的 `DATABASE_URL` 指向哪个数据库和分支，再用有修改表结构权限的同库连接执行 `init-db`，或[在 Vercel Query 执行迁移](#在-vercel-query-执行迁移)。迁移保留已有账号和对话，旧邮箱账号的 `username` 默认留空。迁移成功后检查前端域名的 `/api/health`，再用已有账号访问 `/api/auth/me` 或刷新页面。仅补数据库迁移时，迁移完成即可生效。
 - 注册或登录返回 **503** 且提示「登录服务尚未配置」时，确认后端 Production 的 `AUTH_SECRET` 有有效值且已重新部署。「后端代理尚未配置」时，检查后端 Production 的 `BACKEND_PROXY_SECRET`。
 - **401** 时检查登录状态。**403** 时检查两边的代理密钥是否一致，以及 Flask 的部署保护。前端返回 **502** 且提示「无法连接 iTip 后端」时，核对 `FLASK_API_URL` 和后端生产域名。**500** 时检查 Flask 日志、连接串和初始化步骤。
 - 模型调用失败时检查 API 地址、模型 ID、密钥和权限。外观可在对话页的设置中调整，刷新后应保留在当前浏览器。

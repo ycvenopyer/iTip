@@ -85,6 +85,8 @@ npm.cmd run dev
 
 从同一个 GitHub 仓库创建两个 Vercel 项目，根目录分别选 `backend` 和 `frontend`。在后端连接并初始化 PostgreSQL。分别生成登录签名密钥和代理密钥，把同一份生产代理密钥填入前后端两个项目，再让前端指向 Flask 生产地址。 [Vercel 部署与排查](docs/DEV.md#vercel-部署)
 
+发布包含数据库结构变更的版本前，对该环境实际使用的 PostgreSQL 数据库运行 `init-db`。
+
 ## 文档
 
 - [开发与部署](docs/DEV.md)
