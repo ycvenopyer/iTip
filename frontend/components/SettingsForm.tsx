@@ -40,10 +40,12 @@ export function SettingsForm() {
         setMsg({ type: "error", text: j.error ?? "修改失败" });
         return;
       }
-      setMsg({ type: "success", text: "密码修改成功！" });
+      setMsg({ type: "success", text: "密码已更新" });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+    } catch {
+      setMsg({ type: "error", text: "无法连接 iTip，请稍后重试" });
     } finally {
       setLoading(false);
     }
@@ -97,7 +99,7 @@ export function SettingsForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-xl bg-ink-900 py-2.5 text-sm font-medium text-paper-50 transition-all hover:bg-ink-800 disabled:opacity-60"
+        className="workspace-primary rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
       >
         {loading ? "…" : "修改密码"}
       </button>

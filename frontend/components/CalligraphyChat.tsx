@@ -8,6 +8,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { MessageAvatar } from "@/components/SealAvatar";
+import { WorkspaceIcon } from "@/components/WorkspaceIcon";
+
+const quickPrompts = [
+  { icon: "book", title: "选帖入门", detail: "零基础怎样选第一本毛笔楷书字帖？", text: "零基础，想练毛笔楷书，每天大概半小时，该从哪本帖入手？" },
+  { icon: "pen", title: "执笔与用笔", detail: "找出硬笔执笔姿势的常见错误", text: "硬笔执笔姿势有哪些常见错误？怎么纠正？" },
+  { icon: "grid", title: "结字分析", detail: "把松散的字练得更稳", text: "我的字结构总是散，怎么练习结字？请给具体的日课安排。" },
+  { icon: "practice", title: "硬软笔兼修", detail: "了解两种行书的练习侧重点", text: "硬笔行书和毛笔行书，练习时要注意什么互相照应的点？" },
+] as const;
 
 type Vote = "up" | "down";
 
@@ -299,6 +307,7 @@ export function CalligraphyChat({
 }: CalligraphyChatProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -517,11 +526,10 @@ export function CalligraphyChat({
   }, [genOpen]);
 
   return (
-    <div className="flex h-full flex-col relative" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onPaste={handlePaste}>
-      {/* 装饰性墨点 - 左上角 */}
+    <div className="relative flex min-h-0 flex-1 flex-col" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onPaste={handlePaste}>
       {/* 拖拽放置覆盖层 */}
       {dragOver && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-ink-900/40 backdrop-blur-sm transition-all">
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-all">
           <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-bamboo-400/60 bg-paper-50/90 px-8 py-6 shadow-2xl">
             <svg className="h-10 w-10 text-bamboo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
@@ -531,74 +539,32 @@ export function CalligraphyChat({
           </div>
         </div>
       )}
-      <div className="absolute top-4 left-4 w-16 h-16 rounded-full bg-gradient-to-br from-ink-200/20 to-transparent blur-xl pointer-events-none" />
-      {/* 装饰性墨点 - 右下角 */}
-      <div className="absolute bottom-20 right-8 w-24 h-24 rounded-full bg-gradient-to-tl from-bamboo-500/10 to-transparent blur-2xl pointer-events-none" />
-
-      {/* 消息区域 - 占据剩余空间并可滚动 */}
-      <div className="ink-scroll flex-1 overflow-y-auto relative">
+      <div className="ink-scroll relative min-h-0 flex-1 overflow-y-auto">
         {messages.length === 0 && genImages.length === 0 ? (
-          /* 空状态 - 居中显示欢迎语 - 书法风格 */
-          <div className="flex h-full flex-col items-center justify-center px-6 ink-fade-in">
-            <div className="max-w-md text-center">
-              {/* 印章式标题 */}
-              <div className="mb-6 flex justify-center">
-                <div className="relative">
-                  <div className="h-20 w-20 rounded-sm border-4 border-[#9a2c2c] bg-[#fdf6f6] flex items-center justify-center shadow-md">
-                    <span className="text-3xl font-bold text-[#9a2c2c] font-display tracking-widest">iTip</span>
-                  </div>
-                </div>
-              </div>
-
-              <h2 className="font-display mb-4 text-2xl text-ink-900">
-                笔墨相随，问道书法
-              </h2>
-
-              <div className="brush-divider my-4" />
-
-              <p className="mb-6 text-ink-600/90 leading-relaxed">
-                可问选帖、用笔、结字、日课安排
-                <br />
-                也可上传单字/局部照片做书体与用笔讨论<br />还能生成书法风格的参考图片
-              </p>
-
-              <div className="flex flex-wrap justify-center gap-3 text-sm">
-                <span className="px-4 py-2 rounded-full border border-bamboo-500/30 bg-bamboo-50/50 text-bamboo-700">
-                  硬笔
-                </span>
-                <span className="px-4 py-2 rounded-full border border-ink-300/30 bg-ink-50/50 text-ink-600">
-                  软笔
-                </span>
-                <span className="px-4 py-2 rounded-full border border-cinnabar/30 bg-cinnabar/5 text-cinnabar">
-                  兼修
-                </span>
-              </div>
-
-              {/* 快捷提问 */}
-              <div className="mt-8 flex flex-wrap justify-center gap-2">
-                {[
-                  { label: "零基础如何选帖", text: "零基础，想练毛笔楷书，每天大概半小时，该从哪本帖入手？" },
-                  { label: "执笔常见问题", text: "硬笔执笔姿势有哪些常见错误？怎么纠正？" },
-                  { label: "结字分析", text: "我的字结构总是散，怎么练习结字？请给具体的日课安排。" },
-                  { label: "硬软笔兼修", text: "硬笔行书和毛笔行书，练习时要注意什么互相照应的点？" },
-                ].map((qp) => (
-                  <button
-                    key={qp.label}
-                    type="button"
-                    className="rounded-full border border-ink-200/30 bg-paper-50 px-3 py-1.5 text-xs text-ink-500 transition-all hover:border-bamboo-300/40 hover:bg-bamboo-50/50 hover:text-bamboo-700"
-                    onClick={() => {
-                      void sendMessage({ text: qp.text });
-                    }}
-                  >
-                    {qp.label}
-                  </button>
-                ))}
-              </div>
+          <div className="chat-welcome ink-fade-in">
+            <span className="brand-seal" aria-hidden="true">书</span>
+            <h2>今天想练哪一笔？</h2>
+            <p className="mt-2 max-w-md text-sm leading-6 text-ink-500">问选帖、用笔和结字，或上传习字照片，一起看看从哪里改起。</p>
+            <div className="chat-prompts">
+              {quickPrompts.map((prompt) => (
+                <button key={prompt.title} type="button" className="chat-prompt" disabled={busy || genLoading} onClick={() => {
+                  if (inputRef.current) {
+                    inputRef.current.value = prompt.text;
+                    inputRef.current.focus();
+                  }
+                }}>
+                  <span className="chat-prompt-icon"><WorkspaceIcon name={prompt.icon} className="size-4" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-ink-900">{prompt.title}</span>
+                    <span className="mt-0.5 block text-xs leading-5 text-ink-500">{prompt.detail}</span>
+                  </span>
+                  <WorkspaceIcon name="diagonal" className="size-3.5 shrink-0 text-ink-400" />
+                </button>
+              ))}
             </div>
           </div>
         ) : (
-          /* 消息列表 - 书法卷轴风格 */
-          <div className="mx-auto max-w-3xl space-y-8 px-4 py-8 md:px-6">
+          <div className="chat-column space-y-7 px-4 py-7 md:px-6">
             {/* 生成的图片卡片 */}
             {genImages.map((img) => (
               <div key={img.id} className="flex gap-4 ink-fade-in">
@@ -610,7 +576,7 @@ export function CalligraphyChat({
                     <span className="font-medium text-ink-500 tracking-wide">iTip · 墨图</span>
                     <span className="h-px w-4 bg-ink-200/50" />
                   </div>
-                  <div className="inline-block max-w-full text-left bg-paper-50/80 border border-ink-200/20 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                  <div className="chat-message-surface inline-block max-w-full border border-ink-200 bg-paper-50 px-4 py-3 text-left">
                     <p className="text-xs text-ink-400 mb-2 italic">「{img.prompt}」</p>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={img.url} alt={img.prompt} className="max-w-full rounded-lg border border-ink-200/20 shadow-sm" />
@@ -665,7 +631,7 @@ export function CalligraphyChat({
                           title="编辑消息内容"
                           onChange={(e) => setEditText(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
+                            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                               e.preventDefault();
                               // 保存编辑：发送新消息
                               const trimmed = editText.trim();
@@ -680,7 +646,7 @@ export function CalligraphyChat({
                               setEditText("");
                             }
                           }}
-                          className={`w-full min-h-[80px] resize-y rounded-2xl border px-4 py-3 text-left font-body focus:outline-none focus:ring-2 ${
+                          className={`chat-reading chat-message-surface w-full min-h-[80px] resize-y border px-4 py-3 text-left focus:outline-none focus:ring-2 ${
                             isUser
                               ? "border-bamboo-300 bg-bamboo-50/80 focus:ring-bamboo-400"
                               : "border-ink-300 bg-paper-50 focus:ring-ink-400"
@@ -698,7 +664,7 @@ export function CalligraphyChat({
                               setEditingId(null);
                               setEditText("");
                             }}
-                            className="rounded-lg bg-bamboo-500 px-4 py-1.5 text-sm text-white transition-colors hover:bg-bamboo-600"
+                            className="workspace-primary rounded-lg px-4 py-1.5 text-sm transition-colors"
                           >
                             发送
                           </button>
@@ -721,10 +687,10 @@ export function CalligraphyChat({
                       // 正常显示模式
                       <>
                         <div
-                          className={`inline-block max-w-full text-left ${
+                          className={`chat-reading chat-message-surface inline-block max-w-full text-left ${
                             isUser
-                              ? "bg-bamboo-50/60 border border-bamboo-200/20 rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm"
-                              : "bg-paper-50/80 border border-ink-200/20 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm"
+                              ? "border border-bamboo-200 bg-bamboo-50 px-4 py-3"
+                              : "border border-ink-200 bg-paper-50 px-4 py-3"
                           }`}
                         >
                           {renderParts(m)}
@@ -773,7 +739,7 @@ export function CalligraphyChat({
 
         {/* 错误提示 - 书法风格 */}
         {error && (
-          <div className="mx-auto max-w-3xl px-4 pb-4 md:px-6">
+          <div className="chat-column px-4 pb-4 md:px-6">
             <div className="flex items-center gap-3 rounded-lg border border-cinnabar/20 bg-cinnabar/5 px-4 py-3 text-sm text-cinnabar">
               <svg
                 className="h-4 w-4 shrink-0"
@@ -798,15 +764,12 @@ export function CalligraphyChat({
         )}
       </div>
 
-      {/* 输入框区域 - 书法卷轴风格 */}
-      <div className="relative border-t border-ink-200/20 bg-gradient-to-b from-paper-50 to-paper-100 px-4 py-4 md:px-6">
-        {/* 装饰线条 */}
-        <div className="absolute top-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-ink-200/30 to-transparent" />
-
+      <div className="shrink-0 px-4 pt-2 pb-3 md:px-6">
         <form
-          className="mx-auto max-w-3xl"
+          className="chat-column"
           onSubmit={async (e) => {
             e.preventDefault();
+            if (busy || genLoading) return;
             const el = inputRef.current;
             const text = el?.value?.trim() ?? "";
             if (!text && files.length === 0) return;
@@ -823,23 +786,16 @@ export function CalligraphyChat({
             if (el) el.value = "";
           }}
         >
-          {/* 主输入容器 - 宣纸卷轴风格 */}
-          <div className="relative rounded-2xl border border-ink-200/40 bg-paper-50 shadow-sm transition-all focus-within:border-bamboo-500/40 focus-within:shadow-md focus-within:ring-1 focus-within:ring-bamboo-500/10 ink-ripple">
-            {/* 卷轴装饰角 */}
-            <div className="absolute -top-px -left-px w-3 h-3 border-t-2 border-l-2 border-bamboo-500/30 rounded-tl-2xl" />
-            <div className="absolute -top-px -right-px w-3 h-3 border-t-2 border-r-2 border-bamboo-500/30 rounded-tr-2xl" />
-            <div className="absolute -bottom-px -left-px w-3 h-3 border-b-2 border-l-2 border-bamboo-500/30 rounded-bl-2xl" />
-            <div className="absolute -bottom-px -right-px w-3 h-3 border-b-2 border-r-2 border-bamboo-500/30 rounded-br-2xl" />
-
-            {/* 文本输入区域 */}
+          <div className="chat-composer">
             <textarea
               ref={inputRef}
               rows={1}
               disabled={busy || genLoading}
-              placeholder="在此书写您的书法问题…"
-              className="max-h-40 min-h-[3.5rem] w-full resize-none rounded-2xl bg-transparent px-5 py-4 pr-28 text-ink-800 placeholder:text-ink-400/70 focus:outline-none font-body"
+              placeholder="写下你的书法问题，或贴一张习字照片…"
+              aria-label="书法问题"
+              className="chat-reading min-h-14 w-full resize-none bg-transparent px-4 py-3 text-ink-800 placeholder:text-ink-500 focus:outline-none"
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                   e.preventDefault();
                   e.currentTarget.form?.requestSubmit();
                 }
@@ -850,10 +806,13 @@ export function CalligraphyChat({
             <div className="flex items-center justify-between px-3 pb-3">
               {/* 左侧：附件按钮 + 提示文字 */}
               <div className="flex items-center gap-3">
-                <label
-                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-ink-400 transition-all hover:bg-ink-100 hover:text-ink-600 hover-ink-wash"
+                <button
+                  type="button"
+                  className="workspace-icon-button disabled:opacity-60"
                   aria-label="上传图片"
                   title="上传图片"
+                  disabled={busy}
+                  onClick={() => fileInputRef.current?.click()}
                 >
                   <svg
                     className="h-5 w-5"
@@ -868,18 +827,22 @@ export function CalligraphyChat({
                       d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a2.25 2.25 0 002.25-2.25V6a2.25 2.25 0 00-2.25-2.25H3.75A2.25 2.25 0 001.5 6v12a2.25 2.25 0 002.25 2.25z"
                     />
                   </svg>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={busy}
-                    onChange={(e) => { if (e.target.files) validateAndAddFiles(e.target.files); e.target.value = ""; }}
-                  />
-                </label>
-{/* 生成图片 */}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  disabled={busy}
+                  onChange={(event) => {
+                    if (event.currentTarget.files) validateAndAddFiles(event.currentTarget.files);
+                    event.currentTarget.value = "";
+                  }}
+                />
                 <button
                   type="button"
                   aria-label="生成书法图片"
+                  aria-expanded={genOpen}
                   title="AI 生成书法参考图"
                   disabled={busy || genLoading}
                   onClick={() => setGenOpen(!genOpen)}
@@ -893,9 +856,7 @@ export function CalligraphyChat({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
                   </svg>
                 </button>
-                <span className="text-xs text-ink-400/60 hidden sm:inline">
-                  上传 / 拖拽 / 粘贴图片，或 AI 生成
-                </span>
+                <span className="hidden text-xs text-ink-500 sm:inline">支持拖拽或粘贴图片</span>
               </div>
 
               {/* 右侧：发送/停止按钮 - 印章风格 */}
@@ -917,7 +878,7 @@ export function CalligraphyChat({
                     type="submit"
                     aria-label="发送消息"
                     title="发送消息 (Enter)"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-bamboo-500 text-white shadow-sm transition-all hover:bg-bamboo-600 hover:shadow-md disabled:opacity-50"
+                    className="workspace-primary flex size-9 items-center justify-center rounded-lg transition-colors"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
@@ -931,7 +892,7 @@ export function CalligraphyChat({
           
           {/* 图片生成面板 */}
           {genOpen && (
-            <div className="mt-3 rounded-2xl border border-cinnabar/20 bg-paper-50 p-4 shadow-lg ink-fade-in">
+            <div className="chat-tool-panel mt-3 border border-cinnabar/20 bg-paper-50 p-4 shadow-lg ink-fade-in">
                             {/* 尺寸选择器 */}
                             <div className="mb-3 flex items-center gap-2">
                               <span className="text-xs text-ink-400">尺寸：</span>
@@ -942,7 +903,7 @@ export function CalligraphyChat({
                                     onClick={() => setGenSize(sz)}
                                     className={`rounded-lg px-3 py-1 text-xs transition-all ${
                                       genSize === sz
-                                        ? "bg-cinnabar text-white shadow-sm"
+                                        ? "bg-cinnabar text-[color:var(--accent-ink)] shadow-sm"
                                         : "border border-ink-200/30 bg-paper-100/80 text-ink-500 hover:border-cinnabar/30"
                                     }`}
                                   >{label}</button>
@@ -986,7 +947,7 @@ export function CalligraphyChat({
                     type="button"
                     onClick={handleGenSubmit}
                     disabled={genLoading || !genPrompt.trim()}
-                    className="flex items-center gap-1.5 rounded-lg bg-cinnabar px-5 py-1.5 text-sm text-white transition-all hover:bg-cinnabar-light disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-lg bg-cinnabar px-5 py-1.5 text-sm text-[color:var(--accent-ink)] transition-colors hover:bg-cinnabar-light disabled:opacity-50"
                   >
                     {genLoading ? (
                       <>
@@ -1034,6 +995,7 @@ export function CalligraphyChat({
           )}
 
         </form>
+        <p className="mt-2 hidden text-center text-xs text-ink-500 sm:block">Enter 发送 · Shift + Enter 换行</p>
       </div>
     </div>
   );

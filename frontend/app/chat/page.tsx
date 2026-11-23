@@ -47,6 +47,7 @@ export default async function ChatPage({ searchParams }: Props) {
       summaries={list}
       activeId={convo.id}
       initialMessages={convo.messages}
+      email={session.email}
     />
   );
 }

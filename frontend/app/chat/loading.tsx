@@ -1,7 +1,7 @@
 ﻿export default function ChatLoading() {
   return (
-    <div className="flex min-h-screen bg-paper-100">
-      <aside className="w-72 border-r border-ink-200/25 bg-paper-50/80 p-4">
+    <div className="flex h-dvh bg-paper-100" aria-busy="true" aria-label="正在加载对话">
+      <aside className="hidden w-[262px] border-r border-ink-200 bg-paper-50 p-4 lg:block" aria-hidden="true">
         <div className="mb-4 h-8 animate-pulse rounded-lg bg-ink-100/50" />
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (

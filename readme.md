@@ -9,6 +9,7 @@ iTip is a Chinese calligraphy assistant for learners of brush and hard-pen calli
 - Stream answers with links to relevant calligraphy sources.
 - Discuss writing samples with a vision model and request reference images from an image model.
 - Register, sign in, and manage private conversations with search, renaming, pinning, and deletion.
+- Change your password and personalize the workspace theme, typography, and layout in Settings. Appearance preferences are saved in your browser.
 - Run locally or deploy both services to Vercel.
 
 The local app is available at `http://localhost:3000`. For a Vercel deployment, use the production domain assigned to the frontend project.

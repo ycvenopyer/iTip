@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./workspace.css";
 
 /* 系统字体栈：避免 build/dev 时依赖 Google Fonts（内网或防火墙下会失败） */
 :root {
@@ -8,24 +9,28 @@
 
 /* 纸感 / 墨 / 章泥绿竹 — 无蓝紫渐变 */
 @theme inline {
-  --color-paper-50: #fbf7ef;
-  --color-paper-100: #f2eadc;
-  --color-ink-50: #f4f0e8;
-  --color-ink-100: #e8e0d0;
-  --color-ink-200: #c9c0b3;
-  --color-ink-300: #a39a8c;
-  --color-ink-400: #857c70;
-  --color-ink-500: #6a6255;
-  --color-ink-600: #524b41;
-  --color-ink-700: #3c362f;
-  --color-ink-800: #2a2621;
-  --color-ink-900: #1e1b18;
-  --color-ink-950: #12100e;
-  --color-cinnabar: #9a2c2c;
-  --color-cinnabar-light: #b83e3e;
-  --color-bamboo-400: #6b8e5a;
-  --color-bamboo-500: #4f6a42;
-  --color-bamboo-600: #3d5236;
+  --color-paper-50: var(--paper-surface, #fbf7ef);
+  --color-paper-100: var(--paper-ground, #f2eadc);
+  --color-ink-50: var(--ink-50, #f4f0e8);
+  --color-ink-100: var(--ink-100, #e8e0d0);
+  --color-ink-200: var(--ink-200, #c9c0b3);
+  --color-ink-300: var(--ink-300, #a39a8c);
+  --color-ink-400: var(--ink-400, #857c70);
+  --color-ink-500: var(--ink-500, #6a6255);
+  --color-ink-600: var(--ink-600, #524b41);
+  --color-ink-700: var(--ink-700, #3c362f);
+  --color-ink-800: var(--ink-800, #2a2621);
+  --color-ink-900: var(--ink-900, #1e1b18);
+  --color-ink-950: var(--ink-950, #12100e);
+  --color-cinnabar: var(--danger, #9a2c2c);
+  --color-cinnabar-light: var(--danger-hover, #b83e3e);
+  --color-bamboo-50: var(--accent-soft, #eef2e9);
+  --color-bamboo-200: var(--accent-border, #c5d2bb);
+  --color-bamboo-300: var(--accent-border, #a5b896);
+  --color-bamboo-400: var(--accent, #6b8e5a);
+  --color-bamboo-500: var(--accent, #4f6a42);
+  --color-bamboo-600: var(--accent-hover, #3d5236);
+  --color-bamboo-700: var(--accent-hover, #35462f);
   --color-gold: #c9a961;
   --font-sans: var(--font-body);
   --font-mono: ui-monospace, monospace;
@@ -41,7 +46,7 @@
 }
 
 @utility font-body {
-  font-family: var(--font-body);
+  font-family: var(--reading-font, var(--font-body));
 }
 
 @utility font-brush {

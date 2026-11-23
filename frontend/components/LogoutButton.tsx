@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
-export function LogoutButton() {
+export function LogoutButton({ className = "text-sm text-ink-500 underline-offset-2 hover:underline" }: { className?: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const labelId = useId();
@@ -22,9 +22,9 @@ export function LogoutButton() {
           setLoading(false);
         }
       }}
-      className="text-sm text-ink-500 underline-offset-2 hover:underline"
+      className={className}
     >
-      <span id={labelId}>{loading ? "…" : "退出"}</span>
+      <span id={labelId}>{loading ? "正在退出…" : "退出登录"}</span>
     </button>
   );
 }
