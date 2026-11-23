@@ -15,7 +15,7 @@ export default async function SettingsPage() {
   if (!s) redirect("/login");
   return (
     <WorkspaceSurface className="min-h-dvh py-6 sm:py-14">
-      <main><WorkspaceSettingsPage email={s.email} /></main>
+      <main><WorkspaceSettingsPage account={s} /></main>
     </WorkspaceSurface>
   );
 }

@@ -5,7 +5,7 @@ import { ChatShell } from "@/components/ChatShell";
 import {
   createChatConversation,
   getChatConversation,
-  listChatConversations,
+  getChatWorkspace,
 } from "@/lib/chat-store";
 import { getSession } from "@/lib/auth/session";
 
@@ -22,7 +22,7 @@ export default async function ChatPage({ searchParams }: Props) {
   if (!session) redirect("/login");
 
   const { c } = await searchParams;
-  const list = await listChatConversations();
+  const { conversations: list, projects = [], defaultModel = "" } = await getChatWorkspace();
 
   let activeId = c ?? null;
   if (!activeId || !list.some((x) => x.id === activeId)) {
@@ -45,9 +45,11 @@ export default async function ChatPage({ searchParams }: Props) {
   return (
     <ChatShell
       summaries={list}
+      projects={projects}
+      defaultModel={defaultModel}
       activeId={convo.id}
       initialMessages={convo.messages}
-      email={session.email}
+      account={session}
     />
   );
 }

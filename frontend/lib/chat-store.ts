@@ -7,11 +7,13 @@ export type ChatConversationSummary = {
   title: string;
   updatedAt: number;
   pinned: number;
+  projectId: string | null;
 };
 
-export async function listChatConversations() {
-  const result = await backendJson<{ conversations: ChatConversationSummary[] }>("/api/chat/conversations");
-  return result.conversations;
+export type ChatProject = { id: string; name: string };
+
+export function getChatWorkspace() {
+  return backendJson<{ conversations: ChatConversationSummary[]; projects: ChatProject[]; defaultModel: string }>("/api/chat/conversations");
 }
 
 export async function createChatConversation() {

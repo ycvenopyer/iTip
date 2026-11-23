@@ -1,16 +1,15 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { styleIds } from "@/lib/visual-styles";
+import { styleIds, styleProfiles } from "@/lib/visual-styles";
 
 const appearanceOptions = {
   style: styleIds,
-  mode: ["style", "light", "dark", "system"],
-  accent: ["style", "cinnabar", "bamboo", "indigo"],
-  font: ["sans", "serif"],
-  radius: ["style", "crisp", "soft", "round"],
-  sidebar: ["style", "left", "right"],
-  width: ["standard", "wide"],
+  mode: ["light", "dark", "system"],
+  accent: ["cinnabar", "bamboo", "indigo", "bronze", "jade", "plum"],
+  font: ["sans", "serif", "yahei", "dengxian", "kai"],
+  radius: ["crisp", "soft", "round"],
+  sidebar: ["left", "right"],
 } as const;
 
 export type Appearance = {
@@ -21,14 +20,15 @@ export const textSizeRange = { min: 14, max: 22 };
 
 const defaults: Appearance = {
   style: "classic",
-  mode: "style",
-  accent: "style",
   font: "sans",
-  radius: "style",
-  sidebar: "style",
-  width: "standard",
+  ...styleAppearance("classic"),
   textSize: 16,
 };
+
+function styleAppearance(style: Appearance["style"]): Pick<Appearance, "mode" | "accent" | "radius" | "sidebar"> {
+  const { mode, accent, sidebar } = styleProfiles[style];
+  return { mode, accent, sidebar, radius: style === "classic" ? "soft" : "crisp" };
+}
 
 const key = "itip-appearance";
 const listeners = new Set<() => void>();
@@ -47,16 +47,16 @@ function readAppearance(): Appearance {
     if (raw === cachedRaw) return cached;
     const value: Partial<Appearance> | null = raw ? JSON.parse(raw) : null;
     const textSize = value?.textSize;
-    const fromPreviousVersion = value?.style === undefined;
-    // Carry forward custom choices while letting the old defaults follow a style.
+    const style = readChoice(value?.style, appearanceOptions.style, defaults.style);
+    const preset = styleAppearance(style);
+    // Normalize legacy "style" values to the concrete choices they already displayed.
     cached = {
-      style: readChoice(value?.style, appearanceOptions.style, defaults.style),
-      mode: fromPreviousVersion && value?.mode === "light" ? "style" : readChoice(value?.mode, appearanceOptions.mode, defaults.mode),
-      accent: fromPreviousVersion && value?.accent === "cinnabar" ? "style" : readChoice(value?.accent, appearanceOptions.accent, defaults.accent),
+      style,
+      mode: readChoice(value?.mode, appearanceOptions.mode, preset.mode),
+      accent: readChoice(value?.accent, appearanceOptions.accent, preset.accent),
       font: readChoice(value?.font, appearanceOptions.font, defaults.font),
-      radius: fromPreviousVersion && value?.radius === "soft" ? "style" : readChoice(value?.radius, appearanceOptions.radius, defaults.radius),
-      sidebar: fromPreviousVersion && value?.sidebar === "left" ? "style" : readChoice(value?.sidebar, appearanceOptions.sidebar, defaults.sidebar),
-      width: readChoice(value?.width, appearanceOptions.width, defaults.width),
+      radius: readChoice(value?.radius, appearanceOptions.radius, preset.radius),
+      sidebar: readChoice(value?.sidebar, appearanceOptions.sidebar, preset.sidebar),
       textSize: typeof textSize === "number" && Number.isFinite(textSize)
         ? Math.round(Math.max(textSizeRange.min, Math.min(textSizeRange.max, textSize)))
         : defaults.textSize,
@@ -101,6 +101,11 @@ export function updateAppearance(changes: Partial<Appearance>) {
   applyAppearance({ ...readAppearance(), ...changes });
 }
 
+export function selectStyle(style: Appearance["style"]) {
+  updateAppearance({ style, ...styleAppearance(style) });
+}
+
 export function resetAppearance() {
-  applyAppearance({ ...defaults, style: readAppearance().style });
+  const { style } = readAppearance();
+  applyAppearance({ ...defaults, style, ...styleAppearance(style) });
 }

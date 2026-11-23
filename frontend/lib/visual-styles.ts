@@ -48,7 +48,7 @@ export const styleProfiles: Record<VisualStyle, StyleProfile> = {
     description: "墨室夜读与金石拓片",
     mode: "dark",
     accent: "bronze",
-    sidebar: "right",
+    sidebar: "left",
     artwork: {
       src: "/style-art/yan-stele.jpg",
       width: 760,

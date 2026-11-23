@@ -1,6 +1,7 @@
 import hmac
 import json
 import os
+import re
 import time
 from functools import wraps
 from hashlib import sha256
@@ -9,14 +10,17 @@ from uuid import uuid4
 
 import bcrypt
 import click
+import httpx
 import jwt
 from dotenv import load_dotenv
 from email_validator import EmailNotValidError, validate_email
 from flask import Flask, Response, abort, g, request, stream_with_context
+from openai import APIConnectionError, APITimeoutError, AuthenticationError, PermissionDeniedError, RateLimitError
 from psycopg.errors import UniqueViolation
 from werkzeug.exceptions import HTTPException
 
-from agent import get_model, graph, model_settings
+from agent import ChatTiming, EmptyModelReply, elapsed_ms, get_model, graph, model_settings
+from custom_model import CustomModel
 from db import database, init_schema, query
 from knowledge import ingest
 
@@ -25,6 +29,8 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 4_000_000
 COOKIE = "itip_session"
 SESSION_AGE = 7 * 24 * 60 * 60
+USERNAME = re.compile(r"[a-zA-Z0-9_\-\u4e00-\u9fff]{3,32}")
+IMAGE_SIZES = ("1024x1024", "768x1024", "1024x768")
 
 
 def now_ms():
@@ -81,11 +87,11 @@ def session_user():
         return None
     try:
         payload = jwt.decode(token, auth_secret(), algorithms=["HS256"],
-                             options={"require": ["sub", "exp", "email"]})
+                             options={"require": ["sub", "exp"]})
     except jwt.InvalidTokenError:
         return None
     with database() as conn:
-        row = query(conn, "SELECT id, email FROM users WHERE id = %(id)s",
+        row = query(conn, "SELECT id, email, username FROM users WHERE id = %(id)s",
                     id=payload["sub"]).fetchone()
         return row
 
@@ -100,8 +106,8 @@ def signed_in(handler):
     return wrapped
 
 
-def authenticated_response(user_id, email):
-    token = jwt.encode({"sub": user_id, "email": email,
+def authenticated_response(user_id):
+    token = jwt.encode({"sub": user_id,
                         "exp": int(time.time()) + SESSION_AGE}, auth_secret(), algorithm="HS256")
     response = app.json.response({"ok": True})
     response.set_cookie(COOKIE, token, max_age=SESSION_AGE, httponly=True, samesite="Lax",
@@ -135,16 +141,26 @@ def client_ip():
     return request.remote_addr or "unknown"
 
 
+def normalized_username(value):
+    if not isinstance(value, str) or len(value) > 256 or not USERNAME.fullmatch(value.strip()):
+        abort(400, "账号名须为 3–32 位汉字、英文字母、数字、下划线或连字符")
+    return value.strip().lower()
+
+
 def credentials(data, minimum=1):
     password = data.get("password")
-    email = data.get("email")
-    if not isinstance(email, str) or len(email) > 256 or not valid_password(password, minimum):
-        abort(400, "请填写有效邮箱与密码")
+    identity = data.get("identity", data.get("email"))
+    if (not isinstance(identity, str) or len(identity) > 256 or
+            not identity.strip() or not valid_password(password, minimum)):
+        abort(400, "请填写邮箱或账号名与有效密码")
+    identity = identity.strip()
+    if "@" not in identity and "identity" in data:
+        return None, normalized_username(identity), password
     try:
-        validate_email(email, check_deliverability=False, test_environment=not bool(os.getenv("VERCEL")))
+        validate_email(identity, check_deliverability=False, test_environment=not bool(os.getenv("VERCEL")))
     except EmailNotValidError:
         abort(400, "请填写有效邮箱")
-    return email, password
+    return identity, None, password
 
 
 def valid_password(password, minimum=1):
@@ -158,8 +174,9 @@ def password_bytes(password):
 @app.get("/api/health")
 def health():
     with database() as conn:
-        query(conn, "SELECT id FROM users LIMIT 1")
-        query(conn, "SELECT id FROM chat_conversations LIMIT 1")
+        query(conn, "SELECT id, username FROM users LIMIT 1")
+        query(conn, "SELECT id, project_id FROM chat_conversations LIMIT 1")
+        query(conn, "SELECT id FROM chat_projects LIMIT 1")
         count = query(conn, "SELECT COUNT(*) AS total FROM kb_sources").fetchone()["total"]
     return {"ok": True, "knowledgeSources": count}
 
@@ -167,30 +184,34 @@ def health():
 @app.post("/api/auth/register")
 def register():
     throttle("register", client_ip(), 5, 600)
-    email, password = credentials(body(), minimum=8)
+    email, username, password = credentials(body(), minimum=8)
     user_id = str(uuid4())
     digest = bcrypt.hashpw(password_bytes(password), bcrypt.gensalt(rounds=10)).decode()
     try:
         with database() as conn:
-            query(conn, """INSERT INTO users (id, email, password_hash, created_at)
-                           VALUES (%(id)s, %(email)s, %(digest)s, %(now)s)""",
-                  id=user_id, email=email, digest=digest, now=now_ms())
+            query(conn, """INSERT INTO users (id, email, username, password_hash, created_at)
+                           VALUES (%(id)s, %(email)s, %(username)s, %(digest)s, %(now)s)""",
+                  id=user_id, email=email, username=username, digest=digest, now=now_ms())
     except UniqueViolation:
-        abort(409, "该邮箱已注册")
-    return authenticated_response(user_id, email)
+        abort(409, "该邮箱已注册" if email else "该账号名已被使用")
+    return authenticated_response(user_id)
 
 
 @app.post("/api/auth/login")
 def login():
     throttle("login", client_ip(), 10, 60)
-    email, password = credentials(body())
-    throttle("login-email", email.casefold(), 5, 300)
+    email, username, password = credentials(body())
+    if email:
+        throttle("login-email", email.casefold(), 5, 300)
+        lookup = "SELECT id, password_hash FROM users WHERE email = %(identity)s"
+    else:
+        throttle("login-username", username, 5, 300)
+        lookup = "SELECT id, password_hash FROM users WHERE username = %(identity)s"
     with database() as conn:
-        row = query(conn, "SELECT id, password_hash FROM users WHERE email = %(email)s",
-                    email=email).fetchone()
+        row = query(conn, lookup, identity=email or username).fetchone()
     if not row or not bcrypt.checkpw(password_bytes(password), row["password_hash"].encode()):
-        abort(401, "邮箱或密码错误")
-    return authenticated_response(row["id"], email)
+        abort(401, "登录信息或密码错误")
+    return authenticated_response(row["id"])
 
 
 @app.post("/api/auth/logout")
@@ -227,23 +248,90 @@ def password():
     return {"ok": True}
 
 
+@app.put("/api/auth/username")
+@signed_in
+def set_username():
+    throttle("username", g.user["id"], 5, 600)
+    data = body()
+    username = normalized_username(data.get("username"))
+    current = data.get("currentPassword")
+    if not valid_password(current):
+        abort(400, "请填写当前密码")
+    try:
+        with database() as conn:
+            user_id = g.user["id"]
+            row = query(conn, "SELECT password_hash FROM users WHERE id = %(id)s FOR UPDATE", id=user_id).fetchone()
+            if not row or not bcrypt.checkpw(password_bytes(current), row["password_hash"].encode()):
+                abort(400, "当前密码错误")
+            query(conn, "UPDATE users SET username = %(username)s WHERE id = %(id)s", id=user_id, username=username)
+    except UniqueViolation:
+        abort(409, "该账号名已被使用")
+    return {"username": username}
+
+
 @app.route("/api/chat/conversations", methods=["GET", "POST"])
 @signed_in
 def conversations():
     user_id = g.user["id"]
     if request.method == "POST":
         conversation_id = str(uuid4())
+        project_id = body().get("projectId") if request.get_data(cache=True) else None
         with database() as conn:
-            query(conn, """INSERT INTO chat_conversations (id, user_id, created_at, updated_at)
-                           VALUES (%(id)s, %(user)s, %(now)s, %(now)s)""",
-                  id=conversation_id, user=user_id, now=now_ms())
+            require_project(conn, user_id, project_id)
+            query(conn, """INSERT INTO chat_conversations (id, user_id, project_id, created_at, updated_at)
+                           VALUES (%(id)s, %(user)s, %(project)s, %(now)s, %(now)s)""",
+                  id=conversation_id, user=user_id, project=project_id, now=now_ms())
         return {"id": conversation_id}
     with database() as conn:
-        rows = query(conn, """SELECT id, title, updated_at, pinned FROM chat_conversations
+        rows = query(conn, """SELECT id, title, updated_at, pinned, project_id FROM chat_conversations
                               WHERE user_id = %(user)s ORDER BY pinned DESC, updated_at DESC, id""",
                      user=user_id).fetchall()
-    return {"conversations": [{"id": row["id"], "title": row["title"],
-                               "updatedAt": row["updated_at"], "pinned": row["pinned"]} for row in rows]}
+        projects = query(conn, """SELECT id, name FROM chat_projects WHERE user_id = %(user)s
+                                  ORDER BY created_at DESC, id""", user=user_id).fetchall()
+    return {
+        "conversations": [{"id": row["id"], "title": row["title"], "projectId": row["project_id"],
+                           "updatedAt": row["updated_at"], "pinned": row["pinned"]} for row in rows],
+        "projects": projects,
+        "defaultModel": os.getenv("AI_MODEL", "").strip(),
+    }
+
+
+def require_project(conn, user_id, project_id):
+    if project_id is None:
+        return
+    if not isinstance(project_id, str) or not 1 <= len(project_id) <= 64 or "\x00" in project_id:
+        abort(400, "项目编号无效")
+    if not query(conn, """SELECT id FROM chat_projects WHERE user_id = %(user)s AND id = %(project)s
+                         FOR KEY SHARE""", user=user_id, project=project_id).fetchone():
+        abort(404, "项目不存在")
+
+
+@app.post("/api/chat/projects")
+@signed_in
+def create_project():
+    name = body().get("name")
+    if not isinstance(name, str) or not 1 <= len(name.strip()) <= 60 or "\x00" in name:
+        abort(400, "项目名称须为 1–60 个字符")
+    project = {"id": str(uuid4()), "name": name.strip()}
+    with database() as conn:
+        query(conn, """INSERT INTO chat_projects (id, user_id, name, created_at)
+                       VALUES (%(id)s, %(user)s, %(name)s, %(now)s)""",
+              **project, user=g.user["id"], now=now_ms())
+    return project, 201
+
+
+@app.delete("/api/chat/projects/<project_id>")
+@signed_in
+def delete_project(project_id):
+    params = {"id": project_id, "user": g.user["id"]}
+    with database() as conn:
+        if not query(conn, """SELECT id FROM chat_projects
+                             WHERE id = %(id)s AND user_id = %(user)s FOR UPDATE""", **params).fetchone():
+            abort(404, "项目不存在")
+        query(conn, """UPDATE chat_conversations SET project_id = NULL
+                       WHERE project_id = %(id)s AND user_id = %(user)s""", **params)
+        query(conn, "DELETE FROM chat_projects WHERE id = %(id)s AND user_id = %(user)s", **params)
+    return {"ok": True}
 
 
 def checked_messages(messages):
@@ -262,15 +350,26 @@ def checked_messages(messages):
                 url = part.get("url")
                 if not isinstance(url, str) or not url.startswith("data:image/") or ";base64," not in url:
                     abort(400, "附图必须是内联图片")
+            if part.get("type") == "data-calligraphy-image":
+                image = part.get("data")
+                if (message["role"] != "assistant" or not isinstance(image, dict)
+                        or not generated_image_url(image.get("url"))
+                        or not isinstance(image.get("prompt"), str) or not 1 <= len(image["prompt"]) <= 1000
+                        or image.get("size") not in IMAGE_SIZES or not isinstance(image.get("model"), str)):
+                    abort(400, "参考图格式无效")
     return messages
 
 
 def derive_title(messages):
     for message in messages:
-        if message["role"] == "user":
-            title = " ".join("".join(p["text"] for p in message["parts"] if p.get("type") == "text").split())
-            if title:
-                return title if len(title) <= 48 else title[:47] + "…"
+        text = "".join(
+            part["text"] if part["type"] == "text" else part["data"]["prompt"]
+            for part in message["parts"]
+            if (message["role"] == "user" and part["type"] == "text") or part["type"] == "data-calligraphy-image"
+        )
+        title = " ".join(text.split())
+        if title:
+            return title if len(title) <= 48 else title[:47] + "…"
     return "新对话"
 
 
@@ -305,9 +404,14 @@ def conversation(conversation_id):
         elif isinstance(data.get("pinned"), bool):
             params.update(pinned=int(data["pinned"]))
             sql = "UPDATE chat_conversations SET pinned = %(pinned)s"
+        elif "projectId" in data:
+            params.update(project=data["projectId"])
+            sql = "UPDATE chat_conversations SET project_id = %(project)s"
         else:
             abort(400, "无效操作")
     with database() as conn:
+        if "project" in params:
+            require_project(conn, g.user["id"], params["project"])
         if not query(conn, sql + where, **params).rowcount:
             abort(404, "未找到")
     return {"ok": True}
@@ -317,10 +421,51 @@ def sse(kind, **data):
     return f"data: {json.dumps({'type': kind, **data}, ensure_ascii=False)}\n\n"
 
 
+def checked_custom_model(data):
+    try:
+        return CustomModel.parse(data)
+    except ValueError as error:
+        abort(400, str(error))
+
+
+def reply_error(error, custom):
+    if isinstance(error, (APITimeoutError, httpx.TimeoutException)):
+        return "等待模型响应超时，可重试或切换模型。"
+    if isinstance(error, RateLimitError):
+        return "模型服务请求过于频繁或额度不足，请稍后重试或切换模型。"
+    if isinstance(error, (AuthenticationError, PermissionDeniedError)):
+        return ("自定义模型的 API Key 或权限有误，请在发送键旁的模型菜单测试连接。"
+                if custom else "默认模型的 API Key 或权限有误，请联系部署管理员。")
+    if isinstance(error, (APIConnectionError, httpx.NetworkError)):
+        return "无法连接模型服务，请稍后重试或切换模型。"
+    if isinstance(error, EmptyModelReply):
+        return "模型未返回可显示的正文，可调整问题或切换模型后重试。"
+    return "模型服务暂时无法完成回复，可重试或切换模型。"
+
+
+@app.post("/api/models/test")
+@signed_in
+def test_model():
+    throttle("model-test", g.user["id"], 8, 60)
+    custom = checked_custom_model(body())
+    try:
+        with custom.client(timeout=20) as client:
+            with client.chat.completions.create(
+                model=custom.model, stream=True, messages=[{"role": "user", "content": "Reply with OK."}],
+            ) as stream:
+                if any(chunk.choices and chunk.choices[0].delta.content for chunk in stream):
+                    return {"ok": True}
+    except Exception as error:
+        app.logger.warning("Custom model test failed (%s)", type(error).__name__)
+    abort(502, "连通测试失败，请核对 Base URL、模型 ID、API Key 和流式响应支持")
+
+
 @app.post("/api/chat")
 @signed_in
 def chat():
-    messages = checked_messages(body().get("messages"))
+    started = time.perf_counter()
+    data = body()
+    messages = checked_messages(data.get("messages"))
     if not any(message["role"] == "user" and any(
         p.get("type") == "file" or (p.get("type") == "text" and p["text"].strip())
         for p in message["parts"]
@@ -328,31 +473,55 @@ def chat():
         abort(400, "请输入文字或选择图片")
     throttle("chat", g.user["id"], 30, 60)
     vision = any(p.get("type") == "file" for m in messages if m["role"] == "user" for p in m["parts"])
-    try:
-        model_settings(vision=vision)
-    except ValueError as error:
-        abort(503, str(error))
+    timing = ChatTiming()
+    state = {"messages": messages, "timing": timing}
+    if "customModel" in data:
+        custom = checked_custom_model(data["customModel"])
+        if vision and not custom.vision:
+            abort(400, "当前对话包含图片，请切换到支持图片的模型")
+        state["custom_model"] = custom
+    else:
+        try:
+            model_settings(vision=vision)
+        except ValueError as error:
+            abort(503, str(error))
+
+    mode = "custom" if "custom_model" in state else "vision" if vision else "text"
 
     @stream_with_context
     def generate():
         text_id = str(uuid4())
+        text_started = False
         yield sse("start", messageId=str(uuid4()))
         yield sse("start-step")
-        yield sse("text-start", id=text_id)
         try:
-            for delta in graph.stream({"messages": messages}, stream_mode="custom"):
+            for delta in graph.stream(state, stream_mode="custom"):
+                if not text_started:
+                    yield sse("text-start", id=text_id)
+                    text_started = True
                 yield sse("text-delta", id=text_id, delta=delta)
-            yield sse("text-end", id=text_id)
+            if text_started:
+                yield sse("text-end", id=text_id)
             yield sse("finish-step")
-            yield sse("finish", finishReason="stop")
+            yield sse("finish", finishReason=timing.finish_reason)
         except Exception as error:
             app.logger.warning("Chat generation failed (%s)", type(error).__name__)
-            yield sse("text-end", id=text_id)
-            yield sse("error", errorText="模型或知识库暂时不可用，请稍后重试")
+            if text_started:
+                yield sse("text-end", id=text_id)
+            yield sse("error", errorText=reply_error(error, "custom_model" in state))
+        finally:
+            total = elapsed_ms(started)
+            log = app.logger.warning if total >= 5000 or timing.knowledge_unavailable else app.logger.info
+            log("Chat timing mode=%s retrieval_ms=%s model_first_text_ms=%s total_ms=%d knowledge_unavailable=%s",
+                mode, timing.retrieval_ms, timing.first_text_ms, total, timing.knowledge_unavailable)
         yield "data: [DONE]\n\n"
 
     return Response(generate(), content_type="text/event-stream; charset=utf-8",
                     headers={"x-vercel-ai-ui-message-stream": "v1", "X-Accel-Buffering": "no"})
+
+
+def generated_image_url(url):
+    return isinstance(url, str) and url.startswith(("https://", "data:image/png;base64,"))
 
 
 @app.post("/api/images/generate")
@@ -362,7 +531,7 @@ def generate_image():
     prompt, size = data.get("prompt"), data.get("size", "1024x1024")
     if not isinstance(prompt, str) or not 1 <= len(prompt.strip()) <= 1000:
         abort(400, "请提供有效的出图提示词")
-    if size not in ("1024x1024", "768x1024", "1024x768"):
+    if size not in IMAGE_SIZES:
         abort(400, "不支持的图片尺寸")
     throttle("image", g.user["id"], 10, 600)
     try:
@@ -374,8 +543,8 @@ def generate_image():
             result = client.images.generate(model=model, prompt=prompt, size=size, n=1)
         image = result.data[0]
         url = image.url or (f"data:image/png;base64,{image.b64_json}" if image.b64_json else None)
-        if not url:
-            abort(502, "模型未返回图片")
+        if not generated_image_url(url):
+            abort(502, "模型未返回可用的 HTTPS 图片或 PNG")
     except HTTPException:
         raise
     except Exception as error:

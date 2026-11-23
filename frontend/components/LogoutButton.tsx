@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
+import { clearModelKeys } from "@/lib/custom-models";
 
-export function LogoutButton({ className = "text-sm text-ink-500 underline-offset-2 hover:underline" }: { className?: string }) {
+export function LogoutButton({ accountId, className = "text-sm text-ink-500 underline-offset-2 hover:underline" }: { accountId: string; className?: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const labelId = useId();
@@ -16,6 +17,7 @@ export function LogoutButton({ className = "text-sm text-ink-500 underline-offse
         setLoading(true);
         try {
           await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+          clearModelKeys(accountId);
           router.push("/");
           router.refresh();
         } finally {

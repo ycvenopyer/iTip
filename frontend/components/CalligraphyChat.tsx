@@ -1,26 +1,24 @@
 ﻿"use client";
 
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import type { DataUIPart, UIMessage } from "ai";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MessageAvatar } from "@/components/SealAvatar";
 import { ChatWelcome } from "@/components/ChatWelcome";
+import { ComposerModel } from "@/components/ComposerModel";
+import { useConversationActivities, useConversationRuntime } from "@/components/ConversationRuntime";
+import { CalligraphyImageCard, ImageWorkbench, imagePartType, readCalligraphyImage, type ImageDraft } from "@/components/ImageWorkbench";
+import { ModelConfigDialog } from "@/components/ModelSettings";
+import { WorkspaceIcon } from "@/components/WorkspaceIcon";
 
 type Vote = "up" | "down";
 
-/* ---------- 图片生成相关类型 ---------- */
-type GenImage = {
-  id: string;
-  url: string;
-  prompt: string;
-  size: string;
-  model: string;
-  createdAt: number;
-};
+function isImagePart(part: UIMessage["parts"][number]): part is DataUIPart<{ "calligraphy-image": unknown }> {
+  return part.type === imagePartType;
+}
 
 const assistantMarkdownComponents: Components = {
     h1: ({ children }) => (
@@ -105,7 +103,7 @@ const assistantMarkdownComponents: Components = {
     em: ({ children }) => <em className="italic text-ink-600">{children}</em>,
   };
 
-function AssistantMarkdown({ text }: { text: string }) {
+const AssistantMarkdown = memo(function AssistantMarkdown({ text }: { text: string }) {
   return (
     <div className="chat-markdown max-w-none">
       <Markdown remarkPlugins={[remarkGfm]} components={assistantMarkdownComponents}>
@@ -113,7 +111,7 @@ function AssistantMarkdown({ text }: { text: string }) {
       </Markdown>
     </div>
   );
-}
+});
 
 function roleLabel(role: UIMessage["role"]) {
   if (role === "user") return "我";
@@ -185,7 +183,7 @@ function MessageToolbar({
 
   return (
     <div
-      className="mt-2 flex flex-wrap items-center gap-1"
+      className={`mt-2 flex flex-wrap items-center gap-1 ${isAssistant ? "" : "justify-end"}`}
       role="group"
       aria-label="本条消息操作"
     >
@@ -288,17 +286,21 @@ function MessageToolbar({
 }
 
 export type CalligraphyChatProps = {
+  accountId: string;
   conversationId: string;
+  defaultModelLabel: string;
   initialMessages: UIMessage[];
-  onPersisted?: () => void;
 };
 
 export function CalligraphyChat({
+  accountId,
   conversationId,
+  defaultModelLabel,
   initialMessages,
-  onPersisted,
 }: CalligraphyChatProps) {
-  const router = useRouter();
+  const runtime = useConversationRuntime();
+  const [session] = useState(() => runtime.getSession(conversationId, initialMessages));
+  const activity = useConversationActivities().get(conversationId);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -306,16 +308,10 @@ export function CalligraphyChat({
   const [fileError, setFileError] = useState<string | null>(null);
 
 
-  /* ---- 图片生成状态 ---- */
-  const [genOpen, setGenOpen] = useState(false);
-  const [genPrompt, setGenPrompt] = useState("");
+  const [modelConfigOpen, setModelConfigOpen] = useState(false);
+  const [imageOpen, setImageOpen] = useState(false);
   const [genLoading, setGenLoading] = useState(false);
-  const [genError, setGenError] = useState<string | null>(null);
-  const [genImages, setGenImages] = useState<GenImage[]>([]);
-  const [genSize, setGenSize] = useState<"1024x1024" | "768x1024" | "1024x768">("1024x1024");
-  const genInputRef = useRef<HTMLTextAreaElement | null>(null);
-
-  const hydratedRef = useRef(false);
+  const [imageDraft, setImageDraft] = useState<ImageDraft>({ prompt: "", size: "1024x1024" });
   /* ---- 文件上传辅助 ---- */
   const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
   const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/bmp"];
@@ -359,69 +355,16 @@ export function CalligraphyChat({
     if (imageFiles.length > 0) { e.preventDefault(); validateAndAddFiles(imageFiles); }
   }, [validateAndAddFiles]);
 
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: "/api/chat",
-        credentials: "include",
-        fetch: async (url, init) => {
-          const res = await fetch(url, init);
-          if (res.status === 401) {
-            router.push("/login");
-            throw new Error("未登录或会话已过期");
-          }
-          if (!res.ok) {
-            const t = await res.text();
-            throw new Error(t || "请求失败");
-          }
-          return res;
-        },
-      }),
-    [router]
-  );
   const {
     messages,
+    setMessages,
     sendMessage,
     regenerate,
     status,
     stop,
-    error,
-    clearError,
-  } = useChat({
-    id: conversationId,
-    messages: initialMessages,
-    transport,
-  });
-  const busy = status === "streaming" || status === "submitted";
-
-  useEffect(() => {
-    hydratedRef.current = false;
-  }, [conversationId]);
-
-  useEffect(() => {
-    if (busy) return;
-    if (!hydratedRef.current) {
-      hydratedRef.current = true;
-      return;
-    }
-    if (messages.length === 0) return;
-    const t = setTimeout(() => {
-      void (async () => {
-        const res = await fetch(`/api/chat/conversations/${conversationId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ messages }),
-        });
-        if (res.status === 401) {
-          router.push("/login");
-          return;
-        }
-        if (res.ok) onPersisted?.();
-      })();
-    }, 450);
-    return () => clearTimeout(t);
-  }, [messages, busy, conversationId, onPersisted, router]);
+  } = useChat({ chat: session.chat, experimental_throttle: 45 });
+  const busy = !!activity?.generating;
+  const retry = () => { void runtime.run(session, () => regenerate()); };
 
   const [votes, setVotes] = useState<Record<string, Vote>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -476,47 +419,8 @@ export function CalligraphyChat({
     }
   };
 
-  /* ---- 图片生成逻辑 ---- */
-  const handleGenSubmit = useCallback(async () => {
-    const prompt = genPrompt.trim();
-    if (!prompt) return;
-    setGenLoading(true);
-    setGenError(null);
-    try {
-      const res = await fetch("/api/images/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ prompt, size: genSize }),
-      });
-      const data = (await res.json()) as { url?: string; error?: string; model?: string; size?: string };
-      if (!res.ok) { setGenError(data.error ?? "生成失败"); return; }
-      if (data.url) {
-        setGenImages((prev) => [{
-          id: crypto.randomUUID(),
-          url: data.url!,
-          prompt,
-          size: data.size ?? "1024x1024",
-          model: data.model ?? "",
-          createdAt: Date.now(),
-        }, ...prev]);
-      }
-      const imgMarkdown = "【墨图生成】\n![](" + data.url + ")\n> prompt: " + prompt + "\n> 模型: " + (data.model ?? "");
-      void sendMessage({ text: imgMarkdown });
-      setGenOpen(false);
-      setGenPrompt("");
-    } catch (e) {
-      setGenError(e instanceof Error ? e.message : "生成失败");
-    } finally {
-      setGenLoading(false);
-    }
-   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [genPrompt, genSize]);
-
-  // 打开生成面板时聚焦
-  useEffect(() => {
-    if (genOpen && genInputRef.current) genInputRef.current.focus();
-  }, [genOpen]);
+  const latestImagePart = messages.findLast((message) => message.parts.some(isImagePart))?.parts.find(isImagePart);
+  const latestImage = readCalligraphyImage(latestImagePart?.data);
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onPaste={handlePaste}>
@@ -533,7 +437,7 @@ export function CalligraphyChat({
         </div>
       )}
       <div className="ink-scroll relative min-h-0 flex-1 overflow-y-auto">
-        {messages.length === 0 && genImages.length === 0 ? (
+        {messages.length === 0 ? (
           <ChatWelcome disabled={busy || genLoading} onPrompt={(text) => {
             if (inputRef.current) {
               inputRef.current.value = text;
@@ -542,41 +446,31 @@ export function CalligraphyChat({
           }} />
         ) : (
           <div className="chat-column space-y-7 px-4 py-7 md:px-6">
-            {/* 生成的图片卡片 */}
-            {genImages.map((img) => (
-              <div key={img.id} className="flex gap-4 ink-fade-in">
-                <div className="shrink-0 pt-1">
-                  <MessageAvatar role="assistant" />
-                </div>
-                <div className="flex-1 space-y-2 min-w-0">
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="font-medium text-ink-500 tracking-wide">iTip · 墨图</span>
-                    <span className="h-px w-4 bg-ink-200/50" />
-                  </div>
-                  <div className="chat-message-surface inline-block max-w-full border border-ink-200 bg-paper-50 px-4 py-3 text-left">
-                    <p className="text-xs text-ink-400 mb-2 italic">「{img.prompt}」</p>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img.url} alt={img.prompt} className="max-w-full rounded-lg border border-ink-200/20 shadow-sm" />
-                    <div className="mt-2 flex items-center gap-3">
-                      <span className="text-xs text-ink-400">{img.model}</span>
-                                            <a href={img.url} target="_blank" rel="noreferrer" className="text-xs text-bamboo-600 hover:underline" download>下载</a>
-                                            <button type="button" className="text-xs text-ink-400 hover:text-ink-600" onClick={() => { setGenPrompt(img.prompt); setGenSize(img.size as "1024x1024" | "768x1024" | "1024x768"); setGenOpen(true); setTimeout(() => genInputRef.current?.focus(), 50); }}>重新生成</button>
-                                            <button type="button" className="text-xs text-bamboo-600 hover:underline" onClick={() => { void handleCopy(img.id, img.url); }}>复制链接</button>
+            {/* 对话消息 */}
+            {messages.map((m) => {
+              const part = m.parts.find(isImagePart);
+              const image = readCalligraphyImage(part?.data);
+              if (image) {
+                return (
+                  <div key={m.id} className="flex gap-4">
+                    <div className="shrink-0 pt-1"><MessageAvatar role="assistant" /></div>
+                    <div className="min-w-0 space-y-2">
+                      <p className="text-xs font-medium text-ink-500">iTip · 墨图</p>
+                      <CalligraphyImageCard image={image} copied={copiedId === m.id} onCopy={() => void handleCopy(m.id, image.url)}
+                        onRegenerate={busy || genLoading ? undefined : () => {
+                          setImageDraft({ prompt: image.prompt, size: image.size });
+                          setImageOpen(true);
+                        }} />
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
-
-            {/* 对话消息 */}
-            {messages.map((m, index) => {
+                );
+              }
               const plain = textFromParts(m);
               const isUser = m.role === "user";
               return (
                 <div
                   key={m.id}
-                  className={`flex gap-4 ${isUser ? "flex-row-reverse" : ""} ink-fade-in`}
-                  data-delay={index}
+                  className={`flex gap-4 ${isUser ? "flex-row-reverse" : ""}`}
                 >
                   {/* 印章头像 */}
                   <div className="shrink-0 pt-1">
@@ -613,7 +507,7 @@ export function CalligraphyChat({
                               // 保存编辑：发送新消息
                               const trimmed = editText.trim();
                               if (trimmed) {
-                                void sendMessage({ text: trimmed });
+                                void runtime.run(session, () => sendMessage({ text: trimmed }));
                               }
                               setEditingId(null);
                               setEditText("");
@@ -630,13 +524,13 @@ export function CalligraphyChat({
                           }`}
                           autoFocus
                         />
-                        <div className="mt-2 flex items-center gap-2">
+                        <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
                           <button
                             type="button"
                             onClick={() => {
                               const trimmed = editText.trim();
                               if (trimmed) {
-                                void sendMessage({ text: trimmed });
+                                void runtime.run(session, () => sendMessage({ text: trimmed }));
                               }
                               setEditingId(null);
                               setEditText("");
@@ -686,14 +580,10 @@ export function CalligraphyChat({
                           onCopy={() => void handleCopy(m.id, plain)}
                           isAssistant={!isUser}
                           onRegenerate={
-                            !isUser
-                              ? () => {
-                                  void regenerate();
-                                }
-                              : undefined
+                            !isUser && !busy && !genLoading ? retry : undefined
                           }
                           onEdit={
-                            isUser
+                            isUser && !busy && !genLoading
                               ? () => {
                                   setEditingId(m.id);
                                   setEditText(plain);
@@ -715,7 +605,7 @@ export function CalligraphyChat({
         )}
 
         {/* 错误提示 - 书法风格 */}
-        {error && (
+        {activity?.error && (
           <div className="chat-column px-4 pb-4 md:px-6">
             <div className="flex items-center gap-3 rounded-lg border border-cinnabar/20 bg-cinnabar/5 px-4 py-3 text-sm text-cinnabar">
               <svg
@@ -728,10 +618,12 @@ export function CalligraphyChat({
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 8v4M12 16h.01" />
               </svg>
-              <span className="flex-1">{error.message}</span>
+              <span className="flex-1" role="alert">{activity.error}</span>
+              {messages.length > 0 && <button type="button" onClick={retry} disabled={busy || genLoading}
+                className="rounded px-2 py-1 hover:bg-cinnabar/10 disabled:opacity-50">重试</button>}
               <button
                 type="button"
-                onClick={() => clearError()}
+                onClick={() => runtime.clearError(session)}
                 className="rounded px-2 py-1 text-cinnabar/70 hover:bg-cinnabar/10 hover:text-cinnabar transition-colors"
               >
                 关闭
@@ -742,6 +634,17 @@ export function CalligraphyChat({
       </div>
 
       <div className="shrink-0 px-4 pt-2 pb-3 md:px-6">
+        <div className="chat-column composer-workflows">
+          <button type="button" className="composer-workflow" aria-haspopup="dialog" aria-expanded={imageOpen} disabled={busy}
+            onClick={() => setImageOpen(true)}>
+            <WorkspaceIcon name="sparkle" className="size-4 shrink-0" />AI 生成书法参考图
+          </button>
+          {genLoading && <span className="text-xs text-ink-500" role="status">正在生成参考图…</span>}
+          {busy && <span className="conversation-status" role="status">
+            <span aria-hidden="true" />{status === "streaming" ? "正在回复，可切换对话" : "正在准备回复，可切换对话"}
+          </span>}
+        </div>
+        {activity?.saveError && <p className="chat-column mb-2 text-xs text-cinnabar" role="alert">{activity.saveError}</p>}
         <form
           className="chat-column"
           onSubmit={async (e) => {
@@ -750,17 +653,16 @@ export function CalligraphyChat({
             const el = inputRef.current;
             const text = el?.value?.trim() ?? "";
             if (!text && files.length === 0) return;
-            if (files.length > 0) {
-              const list = new DataTransfer();
-              for (const f of files) list.items.add(f);
-              if (text)
-                await sendMessage({ text, files: list.files });
-              else await sendMessage({ files: list.files });
-              clearFiles();
-            } else {
-              await sendMessage({ text });
-            }
+            const attachments = files;
+            const list = new DataTransfer();
+            for (const file of attachments) list.items.add(file);
+            const pending = runtime.run(session, () => sendMessage({ text: text || undefined, files: list.files }));
             if (el) el.value = "";
+            clearFiles();
+            if (!(await pending) && el?.isConnected && !el.value) {
+              el.value = text;
+              setFiles(attachments);
+            }
           }}
         >
           <div className="chat-composer">
@@ -816,35 +718,19 @@ export function CalligraphyChat({
                     event.currentTarget.value = "";
                   }}
                 />
-                <button
-                  type="button"
-                  aria-label="生成书法图片"
-                  aria-expanded={genOpen}
-                  title="AI 生成书法参考图"
-                  disabled={busy || genLoading}
-                  onClick={() => setGenOpen(!genOpen)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${
-                    genOpen
-                      ? "bg-cinnabar/10 text-cinnabar"
-                      : "text-ink-400 hover:bg-ink-100 hover:text-ink-600"
-                  }`}
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                  </svg>
-                </button>
                 <span className="hidden text-xs text-ink-500 sm:inline">支持拖拽或粘贴图片</span>
               </div>
 
               {/* 右侧：发送/停止按钮 - 印章风格 */}
-              <div className="flex items-center gap-2">
+              <div className="relative flex min-w-0 items-center gap-2">
+                <ComposerModel accountId={accountId} defaultLabel={defaultModelLabel} disabled={busy || genLoading} onConfigure={() => setModelConfigOpen(true)} />
                 {busy ? (
                   <button
                     type="button"
                     aria-label="停止生成"
                     title="停止生成"
                     onClick={() => void stop()}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink-200/60 text-ink-600 transition-all hover:bg-ink-300/60"
+                    className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-ink-200/60 text-ink-600 transition-all hover:bg-ink-300/60"
                   >
                     <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                       <rect x="6" y="6" width="12" height="12" rx="2" />
@@ -855,7 +741,8 @@ export function CalligraphyChat({
                     type="submit"
                     aria-label="发送消息"
                     title="发送消息 (Enter)"
-                    className="workspace-primary flex size-9 items-center justify-center rounded-lg transition-colors"
+                    disabled={genLoading}
+                    className="workspace-primary flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
@@ -867,82 +754,6 @@ export function CalligraphyChat({
           </div>
 
           
-          {/* 图片生成面板 */}
-          {genOpen && (
-            <div className="chat-tool-panel mt-3 border border-cinnabar/20 bg-paper-50 p-4 shadow-lg ink-fade-in">
-                            {/* 尺寸选择器 */}
-                            <div className="mb-3 flex items-center gap-2">
-                              <span className="text-xs text-ink-400">尺寸：</span>
-                              {(["1024x1024","768x1024","1024x768"] as const).map((sz) => {
-                                const label = sz === "1024x1024" ? "方" : sz === "768x1024" ? "竖" : "横";
-                                return (
-                                  <button key={sz} type="button"
-                                    onClick={() => setGenSize(sz)}
-                                    className={`rounded-lg px-3 py-1 text-xs transition-all ${
-                                      genSize === sz
-                                        ? "bg-cinnabar text-[color:var(--accent-ink)] shadow-sm"
-                                        : "border border-ink-200/30 bg-paper-100/80 text-ink-500 hover:border-cinnabar/30"
-                                    }`}
-                                  >{label}</button>
-                                );
-                              })}
-                            </div>
-                            <div className="flex items-center gap-2 mb-3">
-                <svg className="h-4 w-4 text-cinnabar" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                </svg>
-                <span className="text-sm font-medium text-ink-800">AI 生成书法参考图</span>
-              </div>
-              <textarea
-                ref={genInputRef}
-                value={genPrompt}
-                onChange={(e) => setGenPrompt(e.target.value)}
-                placeholder="描述你想要的书法图片，例如：欧体楷书「永」字，白底黑字，高清…"
-                rows={2}
-                maxLength={1000}
-                disabled={genLoading}
-                className="w-full resize-none rounded-xl border border-ink-200/40 bg-paper-100/80 px-4 py-3 text-sm text-ink-800 placeholder:text-ink-400/60 focus:outline-none focus:ring-2 focus:ring-cinnabar/30 font-body"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenSubmit(); }
-                  if (e.key === "Escape") { setGenOpen(false); setGenPrompt(""); setGenError(null); }
-                }}
-              />
-              {genError && (
-                <p className="mt-2 text-xs text-cinnabar" role="alert">{genError}</p>
-              )}
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-xs text-ink-400">{genPrompt.length}/1000</span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => { setGenOpen(false); setGenPrompt(""); setGenError(null); }}
-                    className="rounded-lg px-4 py-1.5 text-sm text-ink-500 transition-colors hover:bg-ink-100"
-                  >
-                    取消
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleGenSubmit}
-                    disabled={genLoading || !genPrompt.trim()}
-                    className="flex items-center gap-1.5 rounded-lg bg-cinnabar px-5 py-1.5 text-sm text-[color:var(--accent-ink)] transition-colors hover:bg-cinnabar-light disabled:opacity-50"
-                  >
-                    {genLoading ? (
-                      <>
-                        <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                        生成中…
-                      </>
-                    ) : (
-                      "生成图片"
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* 图片预览缩略图 */}
           {files.length > 0 && (
             <div className="mt-2 space-y-2">
@@ -974,6 +785,15 @@ export function CalligraphyChat({
         </form>
         <p className="mt-2 hidden text-center text-xs text-ink-500 sm:block">Enter 发送 · Shift + Enter 换行</p>
       </div>
+      <ModelConfigDialog accountId={accountId} open={modelConfigOpen} onClose={() => setModelConfigOpen(false)} />
+      <ImageWorkbench open={imageOpen} onClose={() => setImageOpen(false)} generating={genLoading}
+        onGenerating={setGenLoading} draft={imageDraft} onDraft={setImageDraft} latest={latestImage ?? undefined}
+        onGenerated={(image) => {
+          setMessages((current) => [...current, {
+            id: crypto.randomUUID(), role: "assistant", parts: [{ type: imagePartType, data: image }],
+          }]);
+          runtime.saveMessages(session);
+        }} />
     </div>
   );
 }

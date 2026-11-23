@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 export function RegisterForm() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const emailId = useId();
+  const identityId = useId();
   const passwordId = useId();
   const errId = useId();
 
@@ -15,7 +15,7 @@ export function RegisterForm() {
         e.preventDefault();
         setErr(null);
         const fd = new FormData(e.currentTarget);
-        const email = String(fd.get("email") ?? "");
+        const identity = String(fd.get("identity") ?? "").trim();
         const password = String(fd.get("password") ?? "");
         setLoading(true);
         try {
@@ -23,7 +23,7 @@ export function RegisterForm() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ identity, password }),
           });
           const j = (await r.json().catch(() => ({}))) as { error?: string };
           if (!r.ok) {
@@ -31,26 +31,31 @@ export function RegisterForm() {
             return;
           }
           window.location.assign("/chat");
+        } catch {
+          setErr("无法连接注册服务，请重试");
         } finally {
           setLoading(false);
         }
       }}
       className="space-y-4"
-      noValidate
     >
       <div>
-        <label htmlFor={emailId} className="text-ink-600/90 block text-sm">
-          邮箱
+        <label htmlFor={identityId} className="text-ink-600/90 block text-sm">
+          邮箱或账号名
         </label>
         <input
-          id={emailId}
-          name="email"
-          type="email"
+          id={identityId}
+          name="identity"
+          type="text"
           required
-          autoComplete="email"
-          aria-describedby={err ? errId : undefined}
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          maxLength={256}
+          aria-describedby={err ? `${identityId}-hint ${errId}` : `${identityId}-hint`}
           className="border-ink-200/50 bg-paper-100/80 focus:ring-bamboo-400/40 mt-1 w-full rounded-xl border px-3 py-2 text-ink-900 focus:outline-none focus:ring-2"
         />
+        <p id={`${identityId}-hint`} className="mt-1 text-xs text-ink-500">账号名可使用 3–32 位汉字、英文字母、数字、下划线或连字符。</p>
       </div>
       <div>
         <label htmlFor={passwordId} className="text-ink-600/90 block text-sm">

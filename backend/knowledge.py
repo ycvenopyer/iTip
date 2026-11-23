@@ -60,27 +60,23 @@ def ingest(path):
 
 def retrieve(question, previous=""):
     """Match Chinese aliases, then traverse one hop of source-backed graph edges."""
-    def terms_for(value):
-        value = normalize(value)[:180]
-        return {value[i:i + size] for i in range(len(value))
-                for size in range(1, min(32, len(value) - i) + 1)}
-
-    current_terms = terms_for(question)
-    if not current_terms:
+    current = normalize(question)
+    if not current:
         return [], []
-    allow_single_character = len(normalize(question)) == 1
     with database() as conn:
-        def match(terms):
-            scores = {}
-            for row in query(conn, """SELECT entity_id, term FROM kb_terms
-                                       WHERE term = ANY(%(terms)s)""", terms=sorted(terms)).fetchall():
-                if len(row["term"]) > 1 or allow_single_character:
-                    scores[row["entity_id"]] = max(scores.get(row["entity_id"], 0), len(row["term"]))
-            return scores
-
-        scores = match(current_terms)
-        if not scores and previous:
-            scores = match(terms_for(previous))
+        rows = query(conn, """
+            SELECT entity_id, term, strpos(%(current)s, term) > 0 AS direct
+            FROM kb_terms
+            WHERE char_length(term) BETWEEN %(min_length)s AND 32
+              AND (strpos(%(current)s, term) > 0 OR strpos(%(previous)s, term) > 0)
+        """, current=current[:180], previous=normalize(previous)[:180],
+            min_length=1 if len(current) == 1 else 2).fetchall()
+        direct, fallback = {}, {}
+        for row in rows:
+            scores = direct if row["direct"] else fallback
+            entity_id = row["entity_id"]
+            scores[entity_id] = max(scores.get(entity_id, 0), len(row["term"]))
+        scores = direct or fallback
         if not scores:
             return [], []
         seeds = sorted(scores, key=lambda item: (-scores[item], item))[:8]

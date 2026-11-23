@@ -6,11 +6,16 @@ iTip is a Chinese calligraphy assistant for learners of brush and hard-pen calli
 
 ## Features
 
+- Switch or start a conversation while an earlier reply streams in the same tab. Completed replies are saved to their original conversations.
+
 - Stream answers with links to relevant calligraphy sources.
 - Discuss writing samples with a vision model and request reference images from an image model.
 - Register, sign in, and manage private conversations with search, renaming, pinning, and deletion. Edit starter questions before sending them.
-- Change your password and personalize the workspace theme, typography, and layout in Settings. Appearance preferences are saved in your browser.
+- Register or sign in with an email address or username. Existing email accounts can add a username in Settings and keep their conversations.
+- Change your password and choose from six accent colors and five reading fonts in Settings. Appearance preferences are saved in your browser.
 - Under **Settings → 风格 (Style)**, choose Classic, Handscroll, Stele, or Writing Desk. The style applies to both login and chat, with separate appearance controls. [Artwork credits](docs/BADGES.md#书法图像与署名)
+- Choose the chat model beside Send. Use **配置模型 (Configure models)** in that menu to add a provider preset or test an OpenAI-compatible endpoint.
+- Organize conversations in projects, pin chats, and open title search from the sidebar. Launch the reference-image workbench from above the composer.
 - Run locally or deploy both services to Vercel.
 
 The local app is available at `http://localhost:3000`. For a Vercel deployment, use the production domain assigned to the frontend project.
@@ -35,6 +40,8 @@ The browser keeps requests on the frontend origin. Next.js proxies `/api/*` to F
 ### Models and data
 
 Model settings live in [`backend/.env.example`](backend/.env.example). Set `AI_BASE_URL` and `AI_API_KEY` for an OpenAI-compatible provider. Configure `AI_MODEL` for text, `AI_VISION_MODEL` for conversations with images, and `AI_IMAGE_MODEL` for reference images. The example shows Zhipu model IDs. Use the IDs available to your provider account.
+
+Custom chat models accept a public HTTPS Base URL, a model ID, and an API key. Model profiles are stored in the current browser, and their API keys are stored in the current tab's session storage.
 
 The [starter corpus](backend/knowledge_seed.json) contains 13 source records covering calligraphy works, inscriptions, publications, exhibition pages, and dictionaries. Each record links to its source and can connect people, works, scripts, or techniques. Add curated records with the `ingest` command. Conversation text and attachments are stored in PostgreSQL and sent to the configured model provider when they are part of a model request. [Architecture and data handling](docs/ARCHITECTURE.md)
 

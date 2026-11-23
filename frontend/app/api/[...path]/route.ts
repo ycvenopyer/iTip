@@ -25,6 +25,7 @@ async function proxy(request: Request, { params }: { params: Promise<{ path: str
     if (value) headers.set(name, value);
   }
 
+  let deadline: AbortSignal | undefined;
   try {
     if (Number(request.headers.get("content-length")) > MAX_BODY_BYTES) {
       return Response.json({ error: "消息或附图过大，请缩小图片或开启新对话" }, { status: 413 });
@@ -33,13 +34,14 @@ async function proxy(request: Request, { params }: { params: Promise<{ path: str
     if (body && body.byteLength > MAX_BODY_BYTES) {
       return Response.json({ error: "消息或附图过大，请缩小图片或开启新对话" }, { status: 413 });
     }
+    deadline = AbortSignal.timeout(105000);
     const upstream = await fetch(backendUrl(pathname), {
       method: request.method,
       headers,
       body,
       cache: "no-store",
       redirect: "error",
-      signal: AbortSignal.any([request.signal, AbortSignal.timeout(105000)]),
+      signal: AbortSignal.any([request.signal, deadline]),
     });
     const responseHeaders = new Headers({ "Cache-Control": "no-store" });
     for (const name of ["content-type", "x-vercel-ai-ui-message-stream", "retry-after"]) {
@@ -49,6 +51,7 @@ async function proxy(request: Request, { params }: { params: Promise<{ path: str
     for (const cookie of upstream.headers.getSetCookie()) responseHeaders.append("Set-Cookie", cookie);
     return new Response(upstream.body, { status: upstream.status, headers: responseHeaders });
   } catch {
+    if (deadline?.aborted) return Response.json({ error: "等待 iTip 后端响应超时，请重试" }, { status: 504 });
     return Response.json({ error: "无法连接 iTip 后端" }, { status: 502 });
   }
 }
