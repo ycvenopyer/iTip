@@ -7,3 +7,4 @@ PyJWT>=2,<3
 bcrypt>=4,<6
 email-validator>=2,<3
 python-dotenv>=1,<2
+OpenCC>=1.1.9,<2

@@ -28,6 +28,7 @@ python -m venv .venv
 ```powershell
 .venv/Scripts/python -m flask --app backend/app.py init-db
 .venv/Scripts/python -m flask --app backend/app.py ingest backend/knowledge_seed.json
+.venv/Scripts/python -m flask --app backend/app.py ingest-study
 .venv/Scripts/python -m flask --app backend/app.py run --port 5000
 ```
 
@@ -49,6 +50,8 @@ npm.cmd run dev
 
 在侧栏新建项目，将已有对话移入项目，再验证置顶和搜索弹窗。删除项目后确认原对话仍在。点击输入框上方的「AI 生成书法参考图」，从右侧工作台生成图片并确认刷新后仍可查看对话中的结果。
 
+打开输入框上方的三个学习面板。用「東」检索书法字典并带入集字拼图，下载 PNG。用「書法與臨摹」验证繁简转换。将一首诗带入章法排版，检查竖排列序和图片导出。给书家加入收藏，从选帖卡加入练习计划并标记完成。用另一账号验证收藏与日期数据隔离。桌面和移动端都应能用键盘打开面板，按 Escape 关闭并继续编辑对话。
+
 在一条对话开始生成回复后立即新建或打开另一条对话。确认两条对话可独立收发、侧栏标出正在生成的会话，且原回复完成后刷新仍可查看。用模拟模型流验证慢响应、超时和输出截断。
 
 ## Vercel 部署
@@ -68,9 +71,10 @@ npm.cmd run dev
 ```powershell
 .venv/Scripts/python -m flask --app backend/app.py init-db
 .venv/Scripts/python -m flask --app backend/app.py ingest backend/knowledge_seed.json
+.venv/Scripts/python -m flask --app backend/app.py ingest-study
 ```
 
-每次发布包含数据库结构变更的 Flask 版本前，对目标环境运行 `init-db`。它在一个事务中创建缺少的表和索引，并迁移已有账号及对话表，可重复执行。`ingest` 用于首次建库或更新资料，按来源 ID 更新资料。
+每次发布包含数据库结构变更的 Flask 版本前，对目标环境运行 `init-db`。它在一个事务中创建缺少的表和索引，并迁移已有账号及对话表，可重复执行。`ingest` 按来源 ID 更新知识库，`ingest-study [路径]` 按稳定 ID 更新工作台目录。省略路径时使用 [study_seed.json](../backend/study_seed.json)。两种导入命令可在安装了后端依赖的环境中单独执行。 [数据库表与字段](database.md)
 
 #### 在 Vercel Query 执行迁移
 
@@ -96,7 +100,7 @@ $itipSchema = Get-Content -Raw -Encoding UTF8 backend/schema.sql
 | `AI_BASE_URL` | 云端可访问的 OpenAI 兼容 API 地址，智谱示例为 `https://open.bigmodel.cn/api/paas/v4` |
 | `AI_API_KEY` | 模型服务商的 API Key |
 | `AI_MODEL` | 文本模型的实际可用 ID |
-| `AI_VISION_MODEL` | 视觉模型的实际可用 ID |
+| `AI_VISION_MODEL` | 对话附图和看图识字使用的视觉模型 ID |
 | `AI_IMAGE_MODEL` | 出图模型的实际可用 ID |
 
 参见 [后端变量模板](../backend/.env.example)。
@@ -122,13 +126,15 @@ $itipSchema = Get-Content -Raw -Encoding UTF8 backend/schema.sql
 - 如果 Flask 日志出现 `column "username" does not exist`、`column "project_id" does not exist` 或 `Database schema mismatch`，先确认部署实际使用的 `DATABASE_URL` 指向哪个数据库和分支，再用有修改表结构权限的同库连接执行 `init-db`，或[在 Vercel Query 执行迁移](#在-vercel-query-执行迁移)。迁移保留已有账号和对话，旧邮箱账号的 `username` 默认留空。迁移成功后检查前端域名的 `/api/health`，再用已有账号访问 `/api/auth/me` 或刷新页面。仅补数据库迁移时，迁移完成即可生效。
 - 注册或登录返回 **503** 且提示「登录服务尚未配置」时，确认后端 Production 的 `AUTH_SECRET` 有有效值且已重新部署。「后端代理尚未配置」时，检查后端 Production 的 `BACKEND_PROXY_SECRET`。
 - **401** 时检查登录状态。**403** 时检查两边的代理密钥是否一致，以及 Flask 的部署保护。前端返回 **502** 且提示「无法连接 iTip 后端」时，核对 `FLASK_API_URL` 和后端生产域名。**500** 时检查 Flask 日志、连接串和初始化步骤。
-- 模型调用失败时检查 API 地址、模型 ID、密钥和权限。外观可在对话页的设置中调整，刷新后应保留在当前浏览器。
+- 自定义模型的连接测试会发送一条简短的流式对话请求，并按失败原因提示检查域名、接口地址、密钥、模型权限或服务商额度。Base URL 可以填写服务商公布的 OpenAI 兼容 API 根路径，也可以粘贴以 `/chat/completions` 结尾的完整地址。
+- 外观可在对话页的设置中调整，刷新后应保留在当前浏览器。
 - 修改变量后重新部署对应项目。使用 Preview 时，给 Preview 后端独立的 PostgreSQL 分支，给两边配置匹配的代理密钥，并让前端 Preview 指向相应的 Flask 域名。
 - 单次选择的附图合计上限为 2 MiB。应用的消息请求上限为 4 MB，累计图片较多而遇到 `413` 时可压缩图片或新开对话。 [Vercel 请求体限制](https://vercel.com/docs/functions/limitations#request-body-size)
 
 ### 回复时间与长度
 
 - 模型 HTTP 客户端的网络超时为 55 秒。流式读取中，这是等待下一块网络数据的时间，连接等其他网络阶段也使用该超时配置。 [HTTPX 超时](https://www.python-httpx.org/advanced/timeouts/)
+- 聊天遇到服务商临时限流或原因不明的 HTTP 429 时，会在正文开始前退避重试最多两次。重试遵循服务商的 `Retry-After`，两次累计等待最多 10 秒。已知额度耗尽、权限错误和已输出正文的请求直接报告错误。默认模型的额度由部署所用的服务商账号提供，多名用户共用该账号的限额。
 - Next.js 代理发往 Flask 的请求在 105 秒时中止。前后端的 Vercel 函数均配置了 120 秒运行上限。 [Vercel 函数运行时长](https://vercel.com/docs/functions/configuring-functions/duration)
 - 聊天请求没有显式指定 `max_tokens` 或 `max_completion_tokens`，回复上限由模型和服务商决定。模型报告达到上限时会在回复末尾提示。4,000,000 字节是接口请求体限制，适用于对话记录及附图等输入。
 - Flask 将慢请求的 `retrieval_ms`、`model_first_text_ms` 和 `total_ms` 记在 `Chat timing` 日志中。用它区分知识库检索、模型返回首段正文和整轮生成耗时。长历史、图片和推理模型可能增加请求处理时间。
@@ -142,4 +148,4 @@ $itipSchema = Get-Content -Raw -Encoding UTF8 backend/schema.sql
 - 支持帖碑、文献、网站、字典四类来源。使用可回查的 HTTPS URL，保留获授权的内容或自行编写的摘要。
 - 重复导入同一个来源 ID 会更新内容和关系。本次未列出的来源继续保留。
 
-参见 [架构与接口](ARCHITECTURE.md)。
+参见 [架构与接口](architecture.md)。

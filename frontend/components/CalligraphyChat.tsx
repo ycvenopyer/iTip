@@ -12,7 +12,9 @@ import { ComposerModel } from "@/components/ComposerModel";
 import { useConversationActivities, useConversationRuntime } from "@/components/ConversationRuntime";
 import { CalligraphyImageCard, ImageWorkbench, imagePartType, readCalligraphyImage, type ImageDraft } from "@/components/ImageWorkbench";
 import { ModelConfigDialog } from "@/components/ModelSettings";
+import { StudyWorkbench, studySections } from "@/components/StudyWorkbench";
 import { WorkspaceIcon } from "@/components/WorkspaceIcon";
+import type { StudyNavigation } from "@/lib/study";
 
 type Vote = "up" | "down";
 
@@ -310,6 +312,11 @@ export function CalligraphyChat({
 
   const [modelConfigOpen, setModelConfigOpen] = useState(false);
   const [imageOpen, setImageOpen] = useState(false);
+  const [studyView, setStudyView] = useState<(StudyNavigation & { version: number }) | null>(null);
+
+  function openStudy(view: StudyNavigation) {
+    setStudyView((current) => ({ ...view, version: (current?.version ?? 0) + 1 }));
+  }
   const [genLoading, setGenLoading] = useState(false);
   const [imageDraft, setImageDraft] = useState<ImageDraft>({ prompt: "", size: "1024x1024" });
   /* ---- 文件上传辅助 ---- */
@@ -635,6 +642,11 @@ export function CalligraphyChat({
 
       <div className="shrink-0 px-4 pt-2 pb-3 md:px-6">
         <div className="chat-column composer-workflows">
+          {studySections.map((section) => <button key={section.label} type="button" className="composer-workflow"
+            aria-haspopup="dialog" aria-expanded={section.tools.some((tool) => tool.tab === studyView?.tab)}
+            onClick={() => openStudy({ tab: section.tools[0].tab })}>
+            <WorkspaceIcon name={section.icon} className="size-4 shrink-0" />{section.label}
+          </button>)}
           <button type="button" className="composer-workflow" aria-haspopup="dialog" aria-expanded={imageOpen} disabled={busy}
             onClick={() => setImageOpen(true)}>
             <WorkspaceIcon name="sparkle" className="size-4 shrink-0" />AI 生成书法参考图
@@ -786,6 +798,7 @@ export function CalligraphyChat({
         <p className="mt-2 hidden text-center text-xs text-ink-500 sm:block">Enter 发送 · Shift + Enter 换行</p>
       </div>
       <ModelConfigDialog accountId={accountId} open={modelConfigOpen} onClose={() => setModelConfigOpen(false)} />
+      <StudyWorkbench view={studyView} navigate={openStudy} close={() => setStudyView(null)} />
       <ImageWorkbench open={imageOpen} onClose={() => setImageOpen(false)} generating={genLoading}
         onGenerating={setGenLoading} draft={imageDraft} onDraft={setImageDraft} latest={latestImage ?? undefined}
         onGenerated={(image) => {

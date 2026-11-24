@@ -1,0 +1,58 @@
+{
+  "study_people": [
+    {"id":"wang","title":"王羲之","aliases":["王右军","王右軍"],"era":"东晋","styles":["行书","草书"],"summary":"《兰亭序》有多种摹本与刻帖传世。研究王书时，可把纸本摹写和碑帖拓本分别对照。","source_url":"https://www.dpm.org.cn/collection/handwriting/228279.html"},
+    {"id":"sun","title":"孙过庭","aliases":["孫過庭","孙虔礼","孫虔禮"],"era":"唐","styles":["草书"],"summary":"《书谱》兼具书论和草书墨迹两种学习价值。可将对笔法的讨论与卷上实际的连带、断笔对读。","source_url":"https://theme.npm.edu.tw/selection/Article.aspx?sNo=04001002"},
+    {"id":"ou","title":"欧阳询","aliases":["歐陽詢","欧体","歐體"],"era":"唐","styles":["楷书"],"summary":"《九成宫醴泉铭》是学习欧体楷书结字的代表碑刻。临摹时可关注中宫收束与外部笔画的伸展。","source_url":"https://www.dpm.org.cn/collection/impres/234546.html"},
+    {"id":"yan","title":"颜真卿","aliases":["顏真卿","颜鲁公","顏魯公","颜体"],"era":"唐","styles":["楷书","行书"],"summary":"存世资料同时呈现颜真卿的碑刻楷书与纸本行草。对照不同媒介，可分辨深刻笔画与墨迹自然行笔的差别。","source_url":"https://theme.npm.edu.tw/selection/Article.aspx?sNo=04001003"},
+    {"id":"liu","title":"柳公权","aliases":["柳公權","柳体","柳體"],"era":"唐","styles":["楷书"],"summary":"《玄秘塔碑》是学习柳体楷书的常见范本。临习时可比较竖画在不同组合中的长度、位置和收束。","source_url":"https://www.dpm.org.cn/collection/impres/259370.html"},
+    {"id":"mi","title":"米芾","aliases":["米元章","襄阳漫士","米襄陽"],"era":"北宋","styles":["行书"],"summary":"米芾留有多件行书手卷。《吴江舟中诗》可用来比较字势倾侧、字径变化与整列节奏。","source_url":"https://www.metmuseum.org/art/collection/search/39919"},
+    {"id":"zhao","title":"赵孟頫","aliases":["趙孟頫","赵体","趙體","赵子昂","趙子昂"],"era":"元","styles":["行书","楷书"],"summary":"赵孟頫多次书写《洛神赋》。遇到同题作品，应先确认馆藏及版本，再选择范本。","source_url":"https://www.dpm.org.cn/collection/handwriting/228244.html"}
+  ],
+  "study_works": [
+    {"id":"lanting","person_id":"wang","title":"兰亭序（神龙本）","aliases":["兰亭集序","蘭亭序","蘭亭集序","神龙本","神龍本","冯承素","馮承素"],"era":"东晋原作题材，唐摹传本","script":"行书","edition":"传冯承素摹本","summary":"故宫博物院所藏墨迹摹本，卷首钤有半印。","practice":"先以四五字为一组，圈出字间呼应，再对照同一字的不同写法。","source_url":"https://www.dpm.org.cn/collection/handwriting/228279.html"},
+    {"id":"shupu","person_id":"sun","title":"书谱","aliases":["書譜","書譜序"],"era":"唐","script":"草书","edition":"纸本墨迹卷","summary":"孙过庭的草书墨迹，同时是一篇书法理论著作。","practice":"选一列把笔势分段，先认出笔画和字界，再练习连续行笔。","source_url":"https://theme.npm.edu.tw/selection/Article.aspx?sNo=04001002"},
+    {"id":"jiucheng","person_id":"ou","title":"九成宫醴泉铭","aliases":["九成宮醴泉銘","九成宫","九成宮"],"era":"唐刻，宋拓","script":"楷书","edition":"故宫博物院藏宋拓","summary":"碑文由魏徵撰，欧阳询书。","practice":"挑选三种结构的字，先标出重心和伸展笔画，然后临写。","source_url":"https://www.dpm.org.cn/collection/impres/234546.html"},
+    {"id":"jizhi","person_id":"yan","title":"祭侄文稿","aliases":["祭姪文稿","祭侄稿"],"era":"唐","script":"行书","edition":"纸本墨迹稿卷","summary":"颜真卿祭侄的稿本，保存改写和圈涂。","practice":"选择连续两列，比较墨色、字距与改写的位置。","source_url":"https://theme.npm.edu.tw/selection/Article.aspx?sNo=04001003"},
+    {"id":"yan-temple","person_id":"yan","title":"颜氏家庙碑","aliases":["顏氏家廟碑","颜家庙碑"],"era":"唐刻，二十世纪拓片","script":"楷书","edition":"大都会艺术博物馆藏拓片","summary":"此拓片对应颜真卿所书家庙碑。","practice":"先临两列字的横、竖画，再对比拓片中的字框和留白。","source_url":"https://www.metmuseum.org/art/collection/search/64029","image_path":"/style-art/yan-stele.jpg","image_credit":"《颜氏家庙碑》二十世纪拓片局部，大都会艺术博物馆"},
+    {"id":"xuanmi","person_id":"liu","title":"玄秘塔碑","aliases":["玄秘塔","大达法师玄秘塔碑","玄秘塔碑冊"],"era":"唐刻，明初拓","script":"楷书","edition":"故宫博物院藏拓本","summary":"学习柳公权楷书常用的碑帖。","practice":"选同列大小不同的字，比较横画长短和上下部分的重心。","source_url":"https://www.dpm.org.cn/collection/impres/259370.html"},
+    {"id":"wu-river","person_id":"mi","title":"吴江舟中诗","aliases":["吳江舟中詩","吴江舟中诗卷"],"era":"北宋，约 1095 年","script":"行书","edition":"大都会艺术博物馆藏墨迹卷","summary":"米芾行书手卷，现有馆藏局部可观察单字的大小和重心。","practice":"选「東」「我」「舟」依次连临，记录每个字的倾斜和行列中留白。","source_url":"https://www.metmuseum.org/art/collection/search/39919","image_path":"/style-art/mi-fu.jpg","image_credit":"《吴江舟中诗》局部，大都会艺术博物馆，1984.174"},
+    {"id":"luoshen","person_id":"zhao","title":"洛神赋","aliases":["洛神賦","行书洛神赋卷"],"era":"元","script":"行书","edition":"故宫博物院藏纸本卷","summary":"赵孟頫书《洛神赋》的馆藏版本之一。","practice":"按列比较相邻字的字径和间距，再从不同作品找同字对照。","source_url":"https://www.dpm.org.cn/collection/handwriting/228244.html"}
+  ],
+  "study_glyphs": [
+    {"id":"east-mi","character":"東","aliases":["东"],"work_id":"wu-river","crop_x":1038,"crop_y":39,"crop_width":153,"crop_height":170},
+    {"id":"me-mi","character":"我","aliases":[],"work_id":"wu-river","crop_x":1038,"crop_y":209,"crop_width":160,"crop_height":151},
+    {"id":"boat-mi","character":"舟","aliases":[],"work_id":"wu-river","crop_x":1042,"crop_y":359,"crop_width":155,"crop_height":134}
+  ],
+  "study_dictionary": [
+    {"id":"shufa-yong","kind":"calligraphy","title":"永","aliases":[],"reading":"yǒng","summary":"观察「永」字中的点、横、竖、钩以及不同方向的撇捺。练习时用慢速分笔写，再比较整字重心。","example":"可检索「永字八法」了解术语。","source_url":"https://dict.revised.moe.edu.tw/dictView.jsp?ID=165970&la=0&powerMode=0"},
+    {"id":"shufa-dong","kind":"calligraphy","title":"東","aliases":["东"],"reading":"dōng","summary":"米芾《吴江舟中诗》中的示例保留传统字形，上部与下部有明显的提按对比。","example":"使用馆藏局部对照斜正与字形宽度。","source_url":"https://www.metmuseum.org/art/collection/search/39919"},
+    {"id":"shufa-wo","kind":"calligraphy","title":"我","aliases":[],"reading":"wǒ","summary":"行书中的斜钩和中部笔画可连带，仍要辨明书写方向。","example":"对照馆藏局部，观察斜钩和末笔的距离。","source_url":"https://www.metmuseum.org/art/collection/search/39919"},
+    {"id":"shufa-zhou","kind":"calligraphy","title":"舟","aliases":[],"reading":"zhōu","summary":"在行书里，上下笔画可以顺势简省；外部轮廓仍影响字的辨识度。","example":"临写后比较两侧的留白。","source_url":"https://www.metmuseum.org/art/collection/search/39919"},
+    {"id":"char-yong","kind":"character","title":"永","aliases":[],"reading":"yǒng","radical":"水","strokes":5,"summary":"表示时间长久、没有终止。","example":"永远、永久。","source_url":"https://dict.mini.moe.edu.tw/"},
+    {"id":"char-han","kind":"character","title":"汉","aliases":["漢"],"reading":"hàn","radical":"氵","strokes":5,"summary":"可指汉族、汉语，也可指中国古代的汉朝。","example":"汉字、汉语。","source_url":"https://dict.mini.moe.edu.tw/"},
+    {"id":"char-shu","kind":"character","title":"书","aliases":["書"],"reading":"shū","radical":"乛","strokes":4,"summary":"可作名词指书籍、文书，也可作动词表示书写。","example":"读书、书写。","source_url":"https://dict.mini.moe.edu.tw/"},
+    {"id":"char-fa","kind":"character","title":"法","aliases":[],"reading":"fǎ","radical":"氵","strokes":8,"summary":"可指规则和办法，也可表示值得仿效的式样。","example":"书法、方法。","source_url":"https://dict.mini.moe.edu.tw/"},
+    {"id":"char-shan","kind":"character","title":"山","aliases":[],"reading":"shān","radical":"山","strokes":3,"summary":"地面明显高起的地形，也可指成片山地。","example":"山峰、登山。","source_url":"https://dict.mini.moe.edu.tw/"},
+    {"id":"char-yue","kind":"character","title":"月","aliases":[],"reading":"yuè","radical":"月","strokes":4,"summary":"可指月亮，也用作计算时间的单位。","example":"明月、正月。","source_url":"https://dict.mini.moe.edu.tw/"},
+    {"id":"word-shufa","kind":"word","title":"书法","aliases":["書法"],"reading":"shū fǎ","summary":"以写字为表现形式的艺术，讲究用笔、单字结构和整体安排。","example":"这件书法作品采用竖排。","source_url":"https://dict.concised.moe.edu.tw/"},
+    {"id":"word-linmo","kind":"word","title":"临摹","aliases":["臨摹"],"reading":"lín mó","summary":"学习书画时依据范本模仿。对着范本写称临，覆在范本上描称摹。","example":"他每天临摹一小段碑帖。","source_url":"https://dict.concised.moe.edu.tw/"},
+    {"id":"word-zhangfa","kind":"word","title":"章法","aliases":[],"reading":"zhāng fǎ","summary":"经营作品整体的组织方法。在书法中涉及字行、疏密、落款与留白。","example":"调整两列之间的距离可以改善章法。","source_url":"https://dict.concised.moe.edu.tw/"},
+    {"id":"word-beitie","kind":"word","title":"碑帖","aliases":[],"reading":"bēi tiè","summary":"习字所用的碑刻拓本和法帖等范本的统称。","example":"她挑了一册清晰的碑帖练习楷书。","source_url":"https://dict.concised.moe.edu.tw/"},
+    {"id":"word-luokuan","kind":"word","title":"落款","aliases":[],"reading":"luò kuǎn","summary":"在书画作品上题写作者、时间或对象等信息，也指这一段文字。","example":"本幅落款留在正文左下。","source_url":"https://dict.concised.moe.edu.tw/"},
+    {"id":"seal-zhuwen","kind":"seal","title":"朱文","aliases":["阳文","陽文"],"reading":"zhū wén","summary":"印面上字形凸起，蘸印泥钤盖后文字呈红色。","example":"对照白文印，观察红白位置的反转。","source_url":"https://www.metmuseum.org/exhibitions/listings/2010/xie-zhiliu"},
+    {"id":"seal-baiwen","kind":"seal","title":"白文","aliases":["阴文","陰文"],"reading":"bái wén","summary":"印面上的文字凹入，钤盖后文字显为纸色。","example":"白文印可用来观察边栏和字形的留红。","source_url":"https://www.metmuseum.org/exhibitions/listings/2010/xie-zhiliu"},
+    {"id":"seal-yinmian","kind":"seal","title":"印面","aliases":[],"reading":"yìn miàn","summary":"印章上用于雕刻印文并接触纸张的一面。","example":"排印稿时应先检查印面宽高。","source_url":"https://www.metmuseum.org/exhibitions/listings/2010/xie-zhiliu"},
+    {"id":"seal-zhuanke","kind":"seal","title":"篆刻","aliases":[],"reading":"zhuàn kè","summary":"组织印面文字、反字上石并用刀刻成印章的艺术。","example":"篆刻练习可先从认识朱文和白文开始。","source_url":"https://www.metmuseum.org/exhibitions/listings/2010/xie-zhiliu"},
+    {"id":"idiom-limu","kind":"idiom","title":"入木三分","aliases":[],"reading":"rù mù sān fēn","summary":"形容分析或描写很深入。传统典故用书写墨迹渗入木板来表现笔力。","example":"他谈到作品结字时，分析得入木三分。","source_url":"https://dict.idioms.moe.edu.tw/"},
+    {"id":"idiom-chenzhu","kind":"idiom","title":"胸有成竹","aliases":[],"reading":"xiōng yǒu chéng zhú","summary":"动手前已有成熟的想法或计划。典故与苏轼记文同画竹有关。","example":"落笔之前先想好布局，他已经胸有成竹。","source_url":"https://dict.idioms.moe.edu.tw/"},
+    {"id":"idiom-hualong","kind":"idiom","title":"画龙点睛","aliases":["畫龍點睛"],"reading":"huà lóng diǎn jīng","summary":"在关键处添上简明而有力的一笔，让整体更鲜明。典出画龙点眼的故事。","example":"结尾这一句起到了画龙点睛的作用。","source_url":"https://dict.idioms.moe.edu.tw/"},
+    {"id":"idiom-tieliao","kind":"idiom","title":"铁画银钩","aliases":["鐵畫銀鉤"],"reading":"tiě huà yín gōu","summary":"以铁线和银钩比喻笔画的劲挺和曲处的灵动，多形容书法笔力。","example":"这幅字的线条有铁画银钩般的劲力。","source_url":"https://dict.idioms.moe.edu.tw/"}
+  ],
+  "study_poems": [
+    {"id":"quiet-night","title":"静夜思","aliases":["靜夜思","李白"],"author":"李白","genre":"唐诗","content":"床前明月光，疑是地上霜。\n举头望明月，低头思故乡。","source_url":"https://zh.wikisource.org/wiki/%E9%9D%9C%E5%A4%9C%E6%80%9D"},
+    {"id":"stork-tower","title":"登鹳雀楼","aliases":["登鸛雀樓","王之渙"],"author":"王之涣","genre":"唐诗","content":"白日依山尽，黄河入海流。\n欲穷千里目，更上一层楼。","source_url":"https://zh.wikisource.org/wiki/%E7%99%BB%E9%B8%9B%E9%9B%80%E6%A8%93"},
+    {"id":"spring-dawn","title":"春晓","aliases":["春曉"],"author":"孟浩然","genre":"唐诗","content":"春眠不觉晓，处处闻啼鸟。\n夜来风雨声，花落知多少。","source_url":"https://zh.wikisource.org/wiki/%E6%98%A5%E6%9B%89_(%E5%AD%9F%E6%B5%A9%E7%84%B6)"},
+    {"id":"ru-meng-ling","title":"如梦令·常记溪亭日暮","aliases":["如夢令","常記溪亭日暮","李清照"],"author":"李清照","genre":"宋词","content":"常记溪亭日暮，沉醉不知归路。\n兴尽晚回舟，误入藕花深处。\n争渡，争渡，惊起一滩鸥鹭。","source_url":"https://zh.wikisource.org/wiki/%E5%A6%82%E5%A4%A2%E4%BB%A4%20(%E6%9D%8E%E6%B8%85%E7%85%A7)/%E5%A6%82%E5%A4%A2%E4%BB%A4%20(%E5%B8%B8%E8%A8%98%E6%BA%AA%E4%BA%AD%E6%97%A5%E6%9A%AE)"},
+    {"id":"shui-diao-ge-tou","title":"水调歌头·明月几时有","aliases":["水調歌頭","明月幾時有","蘇軾"],"author":"苏轼","genre":"宋词","content":"明月几时有，把酒问青天。不知天上宫阙，今夕是何年。\n我欲乘风归去，又恐琼楼玉宇，高处不胜寒。起舞弄清影，何似在人间。\n转朱阁，低绮户，照无眠。不应有恨，何事长向别时圆？\n人有悲欢离合，月有阴晴圆缺，此事古难全。但愿人长久，千里共婵娟。","source_url":"https://zh.wikisource.org/wiki/%E5%AE%8B%E8%A9%9E%E4%B8%89%E7%99%BE%E9%A6%96"}
+  ]
+}

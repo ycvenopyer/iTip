@@ -10,19 +10,19 @@ from uuid import uuid4
 
 import bcrypt
 import click
-import httpx
 import jwt
 from dotenv import load_dotenv
 from email_validator import EmailNotValidError, validate_email
 from flask import Flask, Response, abort, g, request, stream_with_context
-from openai import APIConnectionError, APITimeoutError, AuthenticationError, PermissionDeniedError, RateLimitError
 from psycopg.errors import UndefinedColumn, UndefinedTable, UniqueViolation
 from werkzeug.exceptions import HTTPException
 
-from agent import ChatTiming, EmptyModelReply, elapsed_ms, get_model, graph, model_settings
+from agent import ChatTiming, elapsed_ms, get_model, graph, model_settings
 from custom_model import CustomModel
 from db import database, init_schema, query
 from knowledge import ingest
+from model_stream import EmptyModelReply, model_error_details, retry_after, stream_choices
+from study import SEED_PATH, ingest_study, study_blueprint
 
 load_dotenv(Path(__file__).with_name(".env"))
 app = Flask(__name__)
@@ -439,19 +439,36 @@ def checked_custom_model(data):
         abort(400, str(error))
 
 
-def reply_error(error, custom):
-    if isinstance(error, (APITimeoutError, httpx.TimeoutException)):
-        return "等待模型响应超时，可重试或切换模型。"
-    if isinstance(error, RateLimitError):
-        return "模型服务请求过于频繁或额度不足，请稍后重试或切换模型。"
-    if isinstance(error, (AuthenticationError, PermissionDeniedError)):
-        return ("自定义模型的 API Key 或权限有误，请在发送键旁的模型菜单测试连接。"
-                if custom else "默认模型的 API Key 或权限有误，请联系部署管理员。")
-    if isinstance(error, (APIConnectionError, httpx.NetworkError)):
-        return "无法连接模型服务，请稍后重试或切换模型。"
-    if isinstance(error, EmptyModelReply):
-        return "模型未返回可显示的正文，可调整问题或切换模型后重试。"
-    return "模型服务暂时无法完成回复，可重试或切换模型。"
+MODEL_ERROR_MESSAGES = {
+    "timeout": "等待模型响应超时，请重试或切换模型。",
+    "concurrency": "模型服务商的并发或请求速率已达上限，请稍后重试或切换模型。",
+    "rate": "模型服务商暂时限流，请稍后重试或切换模型。",
+    "rate_or_quota": "模型服务商返回 HTTP 429，请稍后重试。如持续失败，请核对服务商的用量和限额。",
+    "model": "服务商找不到该模型或当前账号无法使用它，请核对模型 ID 和权限。",
+    "endpoint": "模型服务商的接口地址不匹配，请使用该服务商的 OpenAI 兼容 Chat Completions 接口地址。",
+    "unsupported": "接口未返回可用的流式回复，请确认该模型支持 OpenAI 兼容的流式 Chat Completions。",
+    "request": "模型服务商拒绝了请求，请确认模型 ID、接口和请求内容受支持。",
+    "context": "对话内容超过模型的上下文上限，请缩短输入或开启新对话。",
+    "dns": "服务端无法解析 Base URL 的域名，请核对域名。",
+    "address": "模型域名须解析到公网 IPv4 地址。",
+    "policy": "模型服务商限制了当前账号的访问，请在服务商控制台检查账号状态或切换模型。",
+    "tls": "服务端无法验证模型接口的 HTTPS 证书，请检查 Base URL 和证书配置。",
+    "connection": "服务端无法建立或维持到模型接口的连接，请检查服务商状态和后端网络。",
+    "empty": "模型未返回可显示的正文，请重试或切换模型。",
+    "upstream": "模型服务暂时无法完成请求，请重试或切换模型。",
+}
+
+
+def reply_error(kind, custom, retry_delay):
+    if kind == "auth":
+        return ("模型服务商拒绝了访问，请核对 API Key、项目和模型权限。"
+                if custom else "模型服务商拒绝了默认模型的访问，请联系部署管理员核对 API Key 和权限。")
+    if kind == "quota":
+        return ("模型服务商报告余额、套餐或用量额度受限，请在服务商控制台检查。"
+                if custom else "默认模型的服务商报告余额、套餐或用量额度受限，请联系部署管理员或切换模型。")
+    if kind in ("concurrency", "rate", "rate_or_quota") and retry_delay is not None and retry_delay >= 1:
+        return f"{MODEL_ERROR_MESSAGES[kind]}服务商建议等待约 {retry_delay:.0f} 秒后重试。"
+    return MODEL_ERROR_MESSAGES[kind]
 
 
 @app.post("/api/models/test")
@@ -460,15 +477,19 @@ def test_model():
     throttle("model-test", g.user["id"], 8, 60)
     custom = checked_custom_model(body())
     try:
-        with custom.client(timeout=20) as client:
-            with client.chat.completions.create(
-                model=custom.model, stream=True, messages=[{"role": "user", "content": "Reply with OK."}],
-            ) as stream:
-                if any(chunk.choices and chunk.choices[0].delta.content for chunk in stream):
-                    return {"ok": True}
+        probe = [{"role": "user", "content": "Reply with exactly OK."}]
+        with custom.client() as client:
+            has_text = False
+            for _ in stream_choices(client, custom.model, probe):
+                has_text = True
+        if not has_text:
+            raise EmptyModelReply()
     except Exception as error:
-        app.logger.warning("Custom model test failed (%s)", type(error).__name__)
-    abort(502, "连通测试失败，请核对 Base URL、模型 ID、API Key 和流式响应支持")
+        kind, status = model_error_details(error)
+        app.logger.warning("Custom model test failed kind=%s upstream_status=%s (%s)",
+                           kind, status, type(error).__name__)
+        abort(504 if kind == "timeout" else 502, reply_error(kind, True, retry_after(error)))
+    return {"ok": True}
 
 
 @app.post("/api/chat")
@@ -516,10 +537,12 @@ def chat():
             yield sse("finish-step")
             yield sse("finish", finishReason=timing.finish_reason)
         except Exception as error:
-            app.logger.warning("Chat generation failed (%s)", type(error).__name__)
+            kind, status = model_error_details(error)
+            app.logger.warning("Chat generation failed mode=%s kind=%s upstream_status=%s (%s)",
+                               mode, kind, status, type(error).__name__)
             if text_started:
                 yield sse("text-end", id=text_id)
-            yield sse("error", errorText=reply_error(error, "custom_model" in state))
+            yield sse("error", errorText=reply_error(kind, mode == "custom", retry_after(error)))
         finally:
             total = elapsed_ms(started)
             log = app.logger.warning if total >= 5000 or timing.knowledge_unavailable else app.logger.info
@@ -576,4 +599,18 @@ def init_db_command():
 @click.argument("path", type=click.Path(exists=True, dir_okay=False))
 def ingest_command(path):
     print(f"Imported {ingest(path)} knowledge sources.")
+
+
+app.register_blueprint(study_blueprint(signed_in, throttle, body, reply_error))
+
+
+@app.cli.command("ingest-study")
+@click.argument("path", required=False, default=str(SEED_PATH),
+                type=click.Path(exists=True, dir_okay=False))
+def ingest_study_command(path):
+    try:
+        count = ingest_study(path)
+    except (KeyError, TypeError, ValueError) as error:
+        raise click.ClickException(f"工作台目录导入失败：{error}") from error
+    print(f"Imported {count} study catalog records.")
 

@@ -13,9 +13,11 @@ iTip is a Chinese calligraphy assistant for learners of brush and hard-pen calli
 - Register, sign in, and manage private conversations with search, renaming, pinning, and deletion. Edit starter questions before sending them.
 - Register or sign in with an email address or username. Existing email accounts can add a username in Settings and keep their conversations.
 - Change your password and choose from six accent colors and five reading fonts in Settings. Appearance preferences are saved in your browser.
-- Under **Settings → 风格 (Style)**, choose Classic, Handscroll, Stele, or Writing Desk. The style applies to both login and chat, with separate appearance controls. [Artwork credits](docs/BADGES.md#书法图像与署名)
+- Under **Settings → 风格 (Style)**, choose Classic, Handscroll, Stele, or Writing Desk. The style applies to both login and chat, with separate appearance controls. [Artwork credits](docs/architecture.md#图像与署名)
 - Choose the chat model beside Send. Use **配置模型 (Configure models)** in that menu to add a provider preset or test an OpenAI-compatible endpoint.
-- Organize conversations in projects, pin chats, and open title search from the sidebar. Launch the reference-image workbench from above the composer.
+- Organize conversations in projects, pin chats, and open title search from the sidebar.
+- Open the dictionary, practice and creation, calligrapher and work, or AI reference-image panels above the composer. Look up characters, assemble glyph sheets, lay out poems, and track practice days.
+- Save calligraphers and works to your account. The catalog starts with a curated selection of entries and museum sources.
 - Run locally or deploy both services to Vercel.
 
 The local app is available at `http://localhost:3000`. For a Vercel deployment, use the production domain assigned to the frontend project.
@@ -27,7 +29,7 @@ The local app is available at `http://localhost:3000`. For a Vercel deployment, 
 | Frontend | Next.js App Router, React, TypeScript, Tailwind CSS, and AI SDK UI in [`frontend/`](frontend/) |
 | Backend | Python 3.12 and Flask in [`backend/`](backend/) |
 | Agent | LangGraph with a source-backed GraphRAG workflow |
-| Database | PostgreSQL via psycopg for accounts, conversations, rate limits, and knowledge graph tables |
+| Database | PostgreSQL via psycopg for accounts, conversations, rate limits, the knowledge graph, the study catalog, favorites, and practice plans |
 
 The browser keeps requests on the frontend origin. Next.js proxies `/api/*` to Flask and forwards the chat event stream. Flask authenticates the user and handles database and model calls.
 
@@ -39,11 +41,11 @@ The browser keeps requests on the frontend origin. Next.js proxies `/api/*` to F
 
 ### Models and data
 
-Model settings live in [`backend/.env.example`](backend/.env.example). Set `AI_BASE_URL` and `AI_API_KEY` for an OpenAI-compatible provider. Configure `AI_MODEL` for text, `AI_VISION_MODEL` for conversations with images, and `AI_IMAGE_MODEL` for reference images. The example shows Zhipu model IDs. Use the IDs available to your provider account.
+Model settings live in [`backend/.env.example`](backend/.env.example). Set `AI_BASE_URL` and `AI_API_KEY` for an OpenAI-compatible provider. Configure `AI_MODEL` for text, `AI_VISION_MODEL` for image conversations and transcription, and `AI_IMAGE_MODEL` for reference images. The example shows Zhipu model IDs. Use the IDs available to your provider account.
 
 Custom chat models accept a public HTTPS Base URL, a model ID, and an API key. Model profiles are stored in the current browser, and their API keys are stored in the current tab's session storage.
 
-The [starter corpus](backend/knowledge_seed.json) contains 13 source records covering calligraphy works, inscriptions, publications, exhibition pages, and dictionaries. Each record links to its source and can connect people, works, scripts, or techniques. Add curated records with the `ingest` command. Conversation text and attachments are stored in PostgreSQL and sent to the configured model provider when they are part of a model request. [Architecture and data handling](docs/ARCHITECTURE.md)
+The [starter corpus](backend/knowledge_seed.json) contains 13 source records covering calligraphy works, inscriptions, publications, exhibition pages, and dictionaries. Each record links to its source and can connect people, works, scripts, or techniques. Add curated records with the `ingest` command. Conversation text and attachments are stored in PostgreSQL and sent to the configured model provider when they are part of a model request. [Architecture and data handling](docs/architecture.md)
 
 ## Quickstart
 
@@ -65,11 +67,12 @@ Generate a signing key and put its output in `AUTH_SECRET` in `backend/.env`. If
 .venv/bin/python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-In the first terminal, initialize the database, load the starter corpus, and start Flask.
+In the first terminal, initialize the database, load the starter corpus and study catalog, and start Flask.
 
 ```bash
 .venv/bin/python -m flask --app backend/app.py init-db
 .venv/bin/python -m flask --app backend/app.py ingest backend/knowledge_seed.json
+.venv/bin/python -m flask --app backend/app.py ingest-study
 .venv/bin/python -m flask --app backend/app.py run --port 5000
 ```
 
@@ -81,20 +84,21 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The health endpoint at `/api/health` reports the database status and imported source count. For Windows PowerShell commands and environment variable details, see the [development guide](docs/DEV.md).
+Open [http://localhost:3000](http://localhost:3000). The health endpoint at `/api/health` reports the database status and imported source count. For Windows PowerShell commands and environment variable details, see the [development guide](docs/dev.md).
 
 ## Deploy to Vercel
 
-Import the repository into two Vercel projects with root directories `backend` and `frontend`. Connect and initialize PostgreSQL for the backend. Generate separate values for the signing key and proxy secret, then put the same production proxy secret in both projects. Configure the frontend to reach the Flask production origin. [Vercel setup and troubleshooting](docs/DEV.md#vercel-部署)
+Import the repository into two Vercel projects with root directories `backend` and `frontend`. Connect and initialize PostgreSQL for the backend. Generate separate values for the signing key and proxy secret, then put the same production proxy secret in both projects. Configure the frontend to reach the Flask production origin. [Vercel setup and troubleshooting](docs/dev.md#vercel-部署)
 
-Before deploying a release with schema changes, run `init-db` against the PostgreSQL database used by that environment.
+Before deploying a release with schema changes, run `init-db` against the PostgreSQL database used by that environment. Run `ingest-study` to load or update the catalog.
 
 ## Documentation
 
-- [Development and deployment](docs/DEV.md)
-- [Architecture and data handling](docs/ARCHITECTURE.md)
-- [Features and limitations](docs/REQUIREMENTS.md)
-- [Brand assets and icons](docs/BADGES.md)
+- [Development and deployment](docs/dev.md)
+- [Architecture and data handling](docs/architecture.md)
+- [Features and limitations](docs/demand.md)
+- [Database design](docs/database.md)
+- [Dictionaries and tools](docs/more-function/dictionary-and-tool.md), [Practice and creation](docs/more-function/exercise-and-create.md), and [Calligraphers and works](docs/more-function/calligrapher-and-work.md)
 
 ## Contributing
 

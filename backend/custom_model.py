@@ -12,17 +12,25 @@ RESERVED = (IPv4Network("192.0.0.0/24"), IPv4Network("192.88.99.0/24"))
 URL_ERROR = "Base URL 须为公网 HTTPS 域名，使用默认端口，且不带账号、查询参数或片段"
 
 
+class ModelDNSError(httpx.ConnectError):
+    pass
+
+
+class ModelAddressError(httpx.ConnectError):
+    pass
+
+
 class PublicModelTransport(httpx.HTTPTransport):
     def handle_request(self, request):
         url = request.url
         try:
             records = socket.getaddrinfo(url.host + ".", 443, socket.AF_INET, socket.SOCK_STREAM)
         except OSError:
-            raise httpx.ConnectError("模型域名无法解析", request=request) from None
+            raise ModelDNSError("模型域名无法解析", request=request) from None
         addresses = list(dict.fromkeys(IPv4Address(record[4][0]) for record in records))
         if not addresses or any(not address.is_global or address.is_multicast or address.is_reserved
                                 or any(address in subnet for subnet in RESERVED) for address in addresses):
-            raise httpx.ConnectError("模型域名须解析到公网 IPv4 地址", request=request)
+            raise ModelAddressError("模型域名须解析到公网 IPv4 地址", request=request)
 
         # Pin the checked address for TCP and keep the provider hostname for TLS and HTTP.
         request.url = url.copy_with(host=str(addresses[0]))

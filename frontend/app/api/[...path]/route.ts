@@ -8,11 +8,12 @@ const MAX_BODY_BYTES = 4_000_000;
 async function proxy(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
   const path = (await params).path;
   const pathname = "/api/" + path.map(encodeURIComponent).join("/");
+  const requestUrl = new URL(request.url);
   const changesData = request.method !== "GET";
   const origin = request.headers.get("origin");
   const host = request.headers.get("host");
   if (changesData && (request.headers.get("sec-fetch-site") === "cross-site" ||
-      (origin && new URL(request.url).origin !== origin &&
+      (origin && requestUrl.origin !== origin &&
         origin !== `https://${host}` && origin !== `http://${host}`))) {
     return Response.json({ error: "请求来源无效" }, { status: 403 });
   }
@@ -35,7 +36,7 @@ async function proxy(request: Request, { params }: { params: Promise<{ path: str
       return Response.json({ error: "消息或附图过大，请缩小图片或开启新对话" }, { status: 413 });
     }
     deadline = AbortSignal.timeout(105000);
-    const upstream = await fetch(backendUrl(pathname), {
+    const upstream = await fetch(backendUrl(pathname + requestUrl.search), {
       method: request.method,
       headers,
       body,

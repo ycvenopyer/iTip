@@ -13,16 +13,19 @@ flowchart LR
   A --> M[OpenAI 兼容文本或视觉模型]
   A -->|AI SDK SSE| B
   F --> I[OpenAI 兼容出图模型]
+  F --> S[学习工作台目录与工具]
+  S --> P
+  S -->|看图识字| M
 ```
 
-`frontend/` 使用 Next.js 15、React 19、Tailwind 和 AI SDK `useChat`。服务端页面从 Flask 获取登录状态和会话数据。浏览器发出同域 `/api/*` 请求，Next.js 转发 Cookie、状态码和流式响应。`backend/` 中的 Flask 负责账号、PostgreSQL 访问和模型调用。
+`frontend/` 使用 Next.js 15、React 19、Tailwind 和 AI SDK `useChat`。服务端页面从 Flask 获取登录状态和会话数据。浏览器发出同域 `/api/*` 请求，Next.js 保留检索和筛选参数，并转发 Cookie、状态码和流式响应。`backend/` 中的 Flask 负责账号、PostgreSQL 访问和模型调用。
 
 ## 页面与偏好
 
 | 路由 | 用途 |
 |---|---|
 | `/`、`/login`、`/register` | 首页、邮箱或账号名登录与注册 |
-| `/chat?c=<id>` | 有权限的对话与项目侧栏、标题搜索弹窗、发送键旁的模型菜单及参考图工作台 |
+| `/chat?c=<id>` | 有权限的对话与项目侧栏、标题搜索、模型菜单和输入框上方的四个工作台入口 |
 | `/settings` | 页面风格、界面外观和账号安全。对话侧栏底部的账号菜单也可打开设置与帮助 |
 
 页面风格与外观偏好由 `frontend/lib/appearance.ts` 保存在当前浏览器的 `localStorage`。登录和对话读取同一份偏好。所有风格的预设侧栏位置均为左侧，可在界面外观中手动调整。对话固定使用标准宽度。
@@ -30,6 +33,8 @@ flowchart LR
 LangGraph 的三个节点依次准备检索问题、检索知识图谱并生成流式回答。检索用简繁别名定位实体，在来源支撑的关系里扩展一跳，再按直接匹配和相关实体对证据排序。回答末尾附上检索到的来源链接。这一版本以关系图和文本匹配做本地图谱检索，资料规模小，可通过结构化导入扩充。
 
 对话工作区在当前标签页里为各会话保留独立的 AI SDK 客户端。切换或新建对话时，原会话的流继续接收并在侧栏显示状态。用户消息在请求开始时保存，最终结果按会话顺序写回 PostgreSQL。刷新、关闭标签页或离开对话工作区会结束尚未完成的流。
+
+学习工作台复用原生 `dialog` 的焦点管理。目录和日历通过同域 API 读写，拼图和排版在浏览器 Canvas 绘制并导出。看图识字把一张图片交给部署配置的默认视觉模型，并返回可编辑的文本。
 
 系统提示词位于 `backend/agent.py`，明确书法教学范围、附图观察、来源引用、缺失信息和无法执行操作时的回答方式。知识库暂时不可用时，模型仍可给出带说明的通用练习建议。应用分开记录检索耗时和模型首段正文耗时。历史引用链接保留在对话中，提交模型时省去应用自动附加的链接清单。
 
@@ -40,6 +45,7 @@ LangGraph 的三个节点依次准备检索问题、检索知识图谱并生成�
 - `rate_limits` 保存 HMAC 后的限速键及过期时间，多个运行实例共享计数。
 - `kb_sources`、`kb_entities`、`kb_terms`、`kb_source_entities`、`kb_edges` 保存书法资料、实体、别名、出处关联和带出处的关系。知识库查询独立于用户会话。
 - 本地和生产均使用 PostgreSQL，由 [`backend/schema.sql`](../backend/schema.sql) 初始化。后端通过 psycopg 执行参数化 SQL。
+- `study_*` 表保存目录、字形、收藏和练习计划。表字段、访问边界和导入顺序见[数据库设计](database.md)。
 
 ## 认证与会话
 
@@ -65,5 +71,20 @@ LangGraph 的三个节点依次准备检索问题、检索知识图谱并生成�
 | POST | `/api/chat` | LangGraph 书法对话，返回 AI SDK UI 消息 SSE |
 | POST | `/api/models/test` | 测试自定义服务的流式对话 |
 | POST | `/api/images/generate` | 生成参考图 |
+| GET | `/api/study/dictionary/<kind>`、`/api/study/glyphs` | 查询字词和对应馆藏字形 |
+| GET | `/api/study/people`、`/api/study/works`、`/api/study/poems` | 检索书家、作品和诗词 |
+| GET | `/api/study/favorites`、`/api/study/calendar?month=YYYY-MM` | 获取当前账号数据 |
+| PUT / DELETE | `/api/study/favorites/<kind>/<id>`、`/api/study/calendar/<date>` | 增删收藏或写入、移除指定日期的计划 |
+| POST | `/api/study/text/convert`、`/api/study/text/count`、`/api/study/ocr` | 繁简转换、字数统计、看图识字 |
 
-部署和扩充资料的操作见 [开发与部署指南](DEV.md)。
+## 图像与署名
+
+| 文件 | 用途与来源 |
+| --- | --- |
+| `frontend/public/style-art/mi-fu.jpg` | 北宋米芾《吴江舟中诗》局部，大都会艺术博物馆，1984.174，公共领域。用于展卷风格、作品卡片和书法字典裁切。 [藏品页](https://www.metmuseum.org/art/collection/search/39919) |
+| `frontend/public/style-art/yan-stele.jpg` | 颜真卿《颜氏家庙碑》二十世纪拓片局部，大都会艺术博物馆，1977.375.14a–d，公共领域。用于碑拓风格和作品卡片。 [藏品页](https://www.metmuseum.org/art/collection/search/64029) |
+| `frontend/public/style-art/jade-desk.jpg` | 为 iTip 生成的原创青瓷习字案静物图，用于日课风格。 |
+
+站点图标由 Next.js App Router 读取，PWA 图标见 [manifest](../frontend/public/manifest.json)。新增馆藏图片时核实许可，记录作者、题名、藏馆、图像是否为局部及原始链接。
+
+部署和扩充资料的操作见 [开发与部署指南](dev.md)。

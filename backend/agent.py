@@ -12,6 +12,7 @@ from psycopg import Error as DatabaseError
 
 from custom_model import CustomModel
 from knowledge import retrieve
+from model_stream import EmptyModelReply, stream_choices
 
 SYSTEM = """你是 iTip，面向初学者和进阶学习者的中文书法学习助手，兼顾毛笔、硬笔及二者的迁移练习。你的目标是让学习者知道下一步怎么练、怎么观察自己的进步。
 
@@ -40,10 +41,6 @@ class ChatTiming:
     first_text_ms: int | None = None
     knowledge_unavailable: bool = False
     finish_reason: str = "stop"
-
-
-class EmptyModelReply(Exception):
-    pass
 
 
 class ChatState(TypedDict, total=False):
@@ -129,22 +126,16 @@ def answer(state):
     }, ensure_ascii=False, separators=(",", ":"))
     custom = state.get("custom_model")
     client, model = (custom.client(), custom.model) if custom else get_model(vision=vision)
+    messages.insert(0, {"role": "system", "content": f"{SYSTEM}\n检索材料：{context}"})
     started = perf_counter()
     with client:
-        with client.chat.completions.create(
-            model=model, stream=True,
-            messages=[{"role": "system", "content": f"{SYSTEM}\n检索材料：{context}"}, *messages],
-        ) as stream:
-            for chunk in stream:
-                if not chunk.choices:
-                    continue
-                choice = chunk.choices[0]
-                if choice.delta.content:
-                    if timing.first_text_ms is None:
-                        timing.first_text_ms = elapsed_ms(started)
-                    writer(choice.delta.content)
-                if choice.finish_reason in ("length", "content_filter"):
-                    timing.finish_reason = choice.finish_reason.replace("_", "-")
+        for choice in stream_choices(client, model, messages, retries=2):
+            if choice.delta and choice.delta.content:
+                if timing.first_text_ms is None:
+                    timing.first_text_ms = elapsed_ms(started)
+                writer(choice.delta.content)
+            if choice.finish_reason in ("length", "content_filter"):
+                timing.finish_reason = choice.finish_reason.replace("_", "-")
     if timing.first_text_ms is None:
         raise EmptyModelReply()
     if timing.finish_reason == "length":
